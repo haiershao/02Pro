@@ -302,7 +302,8 @@ static dispatch_source_t _heartBeatTimer;
     
     [self checkoutVersion];
     
-    ///////
+
+    /////////////
 }
 
 - (void)checkoutVersion{
