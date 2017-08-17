@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="12121" systemVersion="16F73" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <view contentMode="scaleToFill" id="mVv-c1-WMa" customClass="LHJoyStick">
+            <rect key="frame" x="0.0" y="0.0" width="375" height="375"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="dayuan" translatesAutoresizingMaskIntoConstraints="NO" id="MAM-lQ-7oU">
+                    <rect key="frame" x="0.0" y="0.0" width="375" height="375"/>
+                </imageView>
+                <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="xiaoyuan" translatesAutoresizingMaskIntoConstraints="NO" id="p8t-Sr-XJZ">
+                    <rect key="frame" x="152" y="152" width="70" height="70"/>
+                    <constraints>
+                        <constraint firstAttribute="width" constant="70" id="3ZX-0I-4DB"/>
+                        <constraint firstAttribute="height" constant="70" id="Xzh-xm-rVR"/>
+                    </constraints>
+                </imageView>
+            </subviews>
+            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstItem="MAM-lQ-7oU" firstAttribute="leading" secondItem="mVv-c1-WMa" secondAttribute="leading" id="1Z7-PS-Yee"/>
+                <constraint firstItem="MAM-lQ-7oU" firstAttribute="top" secondItem="mVv-c1-WMa" secondAttribute="top" id="6Bd-Uk-C9S"/>
+                <constraint firstAttribute="bottom" secondItem="MAM-lQ-7oU" secondAttribute="bottom" id="GaE-eo-JJN"/>
+                <constraint firstItem="p8t-Sr-XJZ" firstAttribute="centerY" secondItem="mVv-c1-WMa" secondAttribute="centerY" id="hMC-ac-hoG"/>
+                <constraint firstItem="p8t-Sr-XJZ" firstAttribute="centerX" secondItem="mVv-c1-WMa" secondAttribute="centerX" id="udQ-Ft-nfz"/>
+                <constraint firstAttribute="trailing" secondItem="MAM-lQ-7oU" secondAttribute="trailing" id="zUD-h6-TBv"/>
+            </constraints>
+            <nil key="simulatedStatusBarMetrics"/>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="backImage" destination="MAM-lQ-7oU" id="3VG-Gg-8fi"/>
+                <outlet property="joystickImage" destination="p8t-Sr-XJZ" id="eB3-Gf-PTL"/>
+            </connections>
+            <point key="canvasLocation" x="-236" y="-13"/>
+        </view>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+    </objects>
+    <resources>
+        <image name="dayuan" width="223" height="223"/>
+        <image name="xiaoyuan" width="97" height="97"/>
+    </resources>
+</document>

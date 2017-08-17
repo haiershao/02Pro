@@ -1,0 +1,24 @@
+//
+//  jindouyun.pch
+//  jindouyun
+//
+//  Created by jiyi on 2017/8/3.
+//  Copyright © 2017年 lh. All rights reserved.
+//
+
+#ifndef jindouyun_pch
+#define jindouyun_pch
+
+#ifdef __OBJC__
+#import <UIKit/UIKit.h>
+#import <AVFoundation/AVFoundation.h>
+#import "Constants.h"
+#import "JDYConst.h"
+#import "UIView+Extension.h"
+#import <Masonry.h>
+#import <SVProgressHUD.h>
+#import "UIBarButtonItem+XMGEXtension.h"
+#import <AFNetworking.h>
+#endif
+
+#endif /* jindouyun_pch */

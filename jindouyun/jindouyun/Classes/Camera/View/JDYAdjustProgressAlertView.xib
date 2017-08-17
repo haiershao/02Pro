@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="12121" systemVersion="16F73" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait">
+        <adaptation id="fullscreen"/>
+    </device>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <view contentMode="scaleToFill" id="ieJ-jq-Ozr" customClass="JDYAdjustProgressAlertView">
+            <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="aLj-BW-bCJ">
+                    <rect key="frame" x="50" y="233.5" width="275" height="199"/>
+                    <subviews>
+                        <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="kBG-9w-DOV">
+                            <rect key="frame" x="20" y="36" width="235" height="80"/>
+                            <subviews>
+                                <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="0" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="J04-w2-wZu">
+                                    <rect key="frame" x="0.0" y="0.0" width="235" height="57"/>
+                                    <constraints>
+                                        <constraint firstAttribute="height" constant="57" id="RIW-jg-j4v"/>
+                                    </constraints>
+                                    <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                                    <color key="textColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                                    <nil key="highlightedColor"/>
+                                </label>
+                            </subviews>
+                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+                            <constraints>
+                                <constraint firstItem="J04-w2-wZu" firstAttribute="top" secondItem="kBG-9w-DOV" secondAttribute="top" id="TmS-ga-PuK"/>
+                                <constraint firstAttribute="height" constant="80" id="bGn-eC-NGC"/>
+                                <constraint firstAttribute="trailing" secondItem="J04-w2-wZu" secondAttribute="trailing" id="h3U-Cs-Q2W"/>
+                                <constraint firstItem="J04-w2-wZu" firstAttribute="leading" secondItem="kBG-9w-DOV" secondAttribute="leading" id="zfr-QN-kRZ"/>
+                            </constraints>
+                        </view>
+                    </subviews>
+                    <color key="backgroundColor" red="0.1450980392" green="0.1529411765" blue="0.1960784314" alpha="1" colorSpace="calibratedRGB"/>
+                    <constraints>
+                        <constraint firstAttribute="trailing" secondItem="kBG-9w-DOV" secondAttribute="trailing" constant="20" id="2Fx-QT-4JO"/>
+                        <constraint firstAttribute="height" constant="199" id="4Fq-wH-pIf"/>
+                        <constraint firstAttribute="width" constant="275" id="HL9-JN-hOQ"/>
+                        <constraint firstItem="kBG-9w-DOV" firstAttribute="leading" secondItem="aLj-BW-bCJ" secondAttribute="leading" constant="20" id="ZUI-8i-IxC"/>
+                        <constraint firstItem="kBG-9w-DOV" firstAttribute="top" secondItem="aLj-BW-bCJ" secondAttribute="top" constant="36" id="lAz-mh-XyN"/>
+                    </constraints>
+                </view>
+            </subviews>
+            <color key="backgroundColor" white="0.0" alpha="1" colorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstItem="aLj-BW-bCJ" firstAttribute="centerX" secondItem="ieJ-jq-Ozr" secondAttribute="centerX" id="0rH-V4-vuW"/>
+                <constraint firstItem="aLj-BW-bCJ" firstAttribute="centerY" secondItem="ieJ-jq-Ozr" secondAttribute="centerY" id="l4H-8P-vtx"/>
+            </constraints>
+            <connections>
+                <outlet property="alertInfoLabel" destination="J04-w2-wZu" id="gXF-3J-omm"/>
+                <outlet property="progressView" destination="aLj-BW-bCJ" id="UIs-fC-mDs"/>
+            </connections>
+            <point key="canvasLocation" x="-288.5" y="54.5"/>
+        </view>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+    </objects>
+</document>
