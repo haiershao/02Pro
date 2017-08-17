@@ -225,11 +225,8 @@ static id AFJSONObjectByRemovingKeysWithNullValues(id JSONObject, NSJSONReadingO
         return nil;
     }
 
-<<<<<<< HEAD
     self.acceptableContentTypes = [NSSet setWithObjects:@"application/json", @"text/json", @"text/javascript", @"text/plain",nil];
-=======
-    self.acceptableContentTypes = [NSSet setWithObjects:@"application/json", @"text/json", @"text/javascript", nil];
->>>>>>> 3675e09048dc62a8642b8b1b84de4e478fbb81fa
+
 
     return self;
 }

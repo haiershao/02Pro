@@ -117,6 +117,9 @@ typedef void(^onfinish)(BOOL finish);
 @property (copy  , nonatomic) dispatch_queue_t updateFilequeueZZ;
 @property (weak, nonatomic) IBOutlet UIImageView *batteryImageView;
 @property (copy, nonatomic) NSString *firmwareUrl;
+@property (nonatomic, strong) NSData *updataFileData;
+@property (strong, nonatomic) NSString *hardWareVersionStr;
+@property (strong, nonatomic) NSString *fileSavePath;
 @end
 
 static NSString *searchCellID = @"searchCellID";
@@ -215,6 +218,10 @@ static dispatch_source_t _heartBeatTimer;
         
         [self sendValue];
     }];
+    
+    
+    
+    
     NSLog(@"viewWillAppear %@",self.joystick);
 }
 
@@ -300,10 +307,16 @@ static dispatch_source_t _heartBeatTimer;
 
     [self setUpBatteryView];
     
-    [self checkoutVersion];
+    
     
 
     /////////////
+}
+
+- (void)getHaardWareVersion{
+
+    Byte b[5] = {0XAA,0X5f,0X02,0X01,0X01};
+    [self writeValue:b length:sizeof(b)];
 }
 
 - (void)checkoutVersion{
@@ -324,6 +337,10 @@ static dispatch_source_t _heartBeatTimer;
          fileModel.AppVersion = result[@"AppVersion"];
          fileModel.FirmwareUrl = result[@"FirmwareUrl"];
          fileModel.FirmwareVersion = result[@"FirmwareVersion"];
+         NSString *updateFilePath = [[self createPathToMovie:@"updateFile"] stringByAppendingPathComponent:[NSString stringWithFormat:@"hardwareUpdateFile.bin"]];
+         
+         fileModel.localPath = updateFilePath;
+         weakSelf.fileSavePath = fileModel.localPath;
          NSData *modelData = [NSKeyedArchiver archivedDataWithRootObject:fileModel];
          NSUserDefaults *UserDefaults = [NSUserDefaults standardUserDefaults];
          [UserDefaults setObject:modelData forKey:FirmwareVersionKey];
@@ -332,8 +349,13 @@ static dispatch_source_t _heartBeatTimer;
 //         NSData *unData = [UserDefaults objectForKey:FirmwareVersionKey];
 //         JDYFirmWareFile *unmodel = [NSKeyedUnarchiver unarchiveObjectWithData:unData];
 //         NSLog(@"fileModel %@",unmodel.FirmwareUrl);
+         int temp0 = [weakSelf.hardWareVersionStr intValue];
+         int temp1 = [fileModel.FirmwareVersion intValue];
+         if (temp1 > temp0) {
+             [self setUpNewVersion];
+//             [weakSelf downloadUpdateFile:weakSelf.firmwareUrl localPath:updateFilePath];
+         }
          
-         [self downloadUpdateFile:weakSelf.firmwareUrl];
      } failure:^(NSURLSessionDataTask * _Nullable task, NSError * _Nonnull error) {
          
          NSLog(@"请求失败--%@",error);
@@ -341,7 +363,7 @@ static dispatch_source_t _heartBeatTimer;
     
 }
 
-- (void)downloadUpdateFile:(NSString *)firmwareUrl{
+- (void)downloadUpdateFile:(NSString *)firmwareUrl localPath:(NSString *)localPath{
 
     //1.创建会话管理者
     AFHTTPSessionManager *manager =[AFHTTPSessionManager manager];
@@ -398,10 +420,22 @@ static dispatch_source_t _heartBeatTimer;
          *filePath:下载后文件的保存路径
          */
         NSLog(@"filePath %@ -- %@",filePath, error);
-        NSString *tempStr = [NSString stringWithFormat:@"%@",filePath];
-        tempStr = [[tempStr stringByAppendingString:@"/"] lastPathComponent];
+        if (error) {
+            [SVProgressHUD showInfoWithStatus:@"固件下载失败"];
+        }else{
         
-        NSString *updateFilePath = [[self createPathToMovie:@"updateFile"] stringByAppendingPathComponent:[NSString stringWithFormat:@"hardwareUpdateFile%@",tempStr]];
+            NSData *data = [NSData dataWithContentsOfFile:(NSString *)filePath];
+            
+            if ([data writeToFile:localPath atomically:YES]) {
+                NSLog(@"localPath 写入成功");
+#warning 发指令重启升级明天做
+            }else{
+                
+                NSLog(@"localPath 写入失败");
+                
+            }
+        }
+        
         
         
     }];
@@ -1231,17 +1265,11 @@ static dispatch_source_t _heartBeatTimer;
 
 - (IBAction)updateBtnClick:(UIButton *)sender {
 
-    JDYAdjustAlertView *alertView = [JDYAdjustAlertView showInView:self.view];
-    alertView.delegate = self;
-    alertView.flagStr = @"updateBtnClick";
-    self.alertView = alertView;
-    alertView.alertInfoLabel2.text = @"新版本上线";
-    alertView.alertInfoLabel3.text = @"是否升级?";
-    alertView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.5];
-    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(adjustAlertViewClick:)];
-    tapGesture.delegate = self;
+    if (self.characteristic1 != nil) {
+        [self getHaardWareVersion];
+    }
     
-    [alertView addGestureRecognizer:tapGesture];
+    
 }
 
 - (void)adjustAlertViewClick:(UITapGestureRecognizer*)gesture{
@@ -1253,11 +1281,17 @@ static dispatch_source_t _heartBeatTimer;
 
     if ([flagStr isEqualToString:@"updateBtnClick"]) {
         [self.alertView removeFromSuperview];
+        [self downloadUpdateFile:self.firmwareUrl localPath:self.fileSavePath];
+    }
+}
+
+- (void)updatingAlertView{
+
         self.progressAlertView = [JDYAdjustProgressAlertView showInView:self.view];
         self.progressAlertView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.5];
         self.progressAlertView.alertInfoLabel.text = @"正在升级中...";
         LHGradientProgress *gradProg = [LHGradientProgress sharedInstance];
-        
+
         CGFloat gradProgW = self.progressAlertView.progressView.width;
         CGFloat gradProgH = 5;
         CGFloat gradProgX = 0;
@@ -1266,8 +1300,7 @@ static dispatch_source_t _heartBeatTimer;
         [gradProg showOnParent:self.progressAlertView.progressView position:LHProgressPosDown];
         [gradProg setProgress:1];
         [gradProg simulateProgress];
-//        [self startSendX];
-    }
+        [self startSendX];
 }
 
 - (void)nextUpdate0{
@@ -1414,10 +1447,11 @@ static dispatch_source_t _heartBeatTimer;
     @autoreleasepool {
         isAllowSend = YES;
         
-        NSString * filePath=[[NSBundle mainBundle] pathForResource:@"default080301" ofType:@"bin"];
-        NSData * fileData = [NSData dataWithContentsOfFile:filePath];
-        kUpdataFileLength = (uint32_t)[fileData length];//120604
-        Byte *fileByte = (Byte *)[fileData bytes];
+//        NSString * filePath=[[NSBundle mainBundle] pathForResource:@"default080301" ofType:@"bin"];
+//        NSData * fileData = [NSData dataWithContentsOfFile:filePath];
+//        kUpdataFileLength = (uint32_t)[fileData length];//120604
+//        Byte *fileByte = (Byte *)[fileData bytes];
+        Byte *fileByte = (Byte *)[self.updataFileData bytes];
         NSLog(@"kUpdataFileLength =%uu -- %d",kUpdataFileLength, isAllowSend);
         
         if (isUpdateX) {
@@ -1488,10 +1522,11 @@ static dispatch_source_t _heartBeatTimer;
     @autoreleasepool {
         
         if (isUpdateY) {
-            NSString * filePath=[[NSBundle mainBundle] pathForResource:@"default080301" ofType:@"bin"];
-            NSData * fileData = [NSData dataWithContentsOfFile:filePath];
-            kUpdataFileLength = (uint32_t)[fileData length];//120604
-            Byte *fileByte = (Byte *)[fileData bytes];
+//            NSString * filePath=[[NSBundle mainBundle] pathForResource:@"default080301" ofType:@"bin"];
+//            NSData * fileData = [NSData dataWithContentsOfFile:filePath];
+//            kUpdataFileLength = (uint32_t)[fileData length];//120604
+//            Byte *fileByte = (Byte *)[fileData bytes];
+            Byte *fileByte = (Byte *)[self.updataFileData bytes];
             NSLog(@"kUpdataFileLength =%uu -- %d",kUpdataFileLength, isAllowSend);
             
             blockLength = blockLength + 4;
@@ -1534,10 +1569,11 @@ static dispatch_source_t _heartBeatTimer;
     @autoreleasepool {
         
         if (isUpdateZ) {
-            NSString * filePath=[[NSBundle mainBundle] pathForResource:@"default080301" ofType:@"bin"];
-            NSData * fileData = [NSData dataWithContentsOfFile:filePath];
-            kUpdataFileLength = (uint32_t)[fileData length];//120604
-            Byte *fileByte = (Byte *)[fileData bytes];
+//            NSString * filePath=[[NSBundle mainBundle] pathForResource:@"default080301" ofType:@"bin"];
+//            NSData * fileData = [NSData dataWithContentsOfFile:filePath];
+//            kUpdataFileLength = (uint32_t)[fileData length];//120604
+//            Byte *fileByte = (Byte *)[fileData bytes];
+            Byte *fileByte = (Byte *)[self.updataFileData bytes];
             //            NSLog(@"kUpdataFileLength =%uu -- %d",kUpdataFileLength, isAllowSend);
             
             blockLength = blockLength + 4;
@@ -1576,15 +1612,30 @@ static dispatch_source_t _heartBeatTimer;
 }
 
 - (void)startSendX{
+    NSUserDefaults *UserDefaults = [NSUserDefaults standardUserDefaults];
+     NSData *unData = [UserDefaults objectForKey:FirmwareVersionKey];
+     JDYFirmWareFile *unmodel = [NSKeyedUnarchiver unarchiveObjectWithData:unData];
+     NSLog(@"fileModel %@",unmodel.localPath);
     
-    NSLog(@" 开始升级");
-    if (isUpdateX) {
-        Byte b[] = {0xaa,0x5a,0x03,0xbb,0x66,0x13};
-        NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
-        [self.peripheral writeValue:data0 forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
-        self.isNext = 1;
-        NSLog(@" writeValue-> %@",data0);
+    NSData *data = [NSData dataWithContentsOfFile:unmodel.localPath];
+    if (data) {
+        self.updataFileData = data;
+        
+        NSLog(@" 开始升级");
+        [self updatingAlertView];
+        
+        if (isUpdateX) {
+            Byte b[] = {0xaa,0x5a,0x03,0xbb,0x66,0x13};
+            NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
+            [self.peripheral writeValue:data0 forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
+            self.isNext = 1;
+            NSLog(@" writeValue-> %@",data0);
+        }
+    }else{
+    
+        [SVProgressHUD showInfoWithStatus:@"固件不存在了"];
     }
+    
 }
 
 - (void)startSendY{
@@ -2362,6 +2413,17 @@ static dispatch_source_t _heartBeatTimer;
                                      [baby cancelPeripheralConnection:weakSelf.peripheral];
                                  }
                                  
+                                 self.hardWareVersionStr = @"";
+                                 if ([temp containsString:@"55af0501"]) {
+                                     NSLog(@"version temp %@",temp);
+                                     NSRange range = NSMakeRange(11, 2);
+                                     NSString *str = [temp substringWithRange:range];
+                                     NSLog(@"--%@",str);
+                                     self.hardWareVersionStr = [temp substringWithRange:range];
+                                     
+                                     [self checkoutVersion];
+                                 }
+                                 
                                  flagStr = temp;
                                  if ([flagStr isEqualToString:@"55ae0312 1022"]) {
                                      isFinish = YES;
@@ -2533,6 +2595,21 @@ static dispatch_source_t _heartBeatTimer;
         [SVProgressHUD showErrorWithStatus:tempStr];
         return;
     }
+}
+
+- (void)setUpNewVersion{
+
+    JDYAdjustAlertView *alertView = [JDYAdjustAlertView showInView:self.view];
+    alertView.delegate = self;
+    alertView.flagStr = @"updateBtnClick";
+    self.alertView = alertView;
+    alertView.alertInfoLabel2.text = @"新版本上线";
+    alertView.alertInfoLabel3.text = @"是否升级?";
+    alertView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.5];
+    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(adjustAlertViewClick:)];
+    tapGesture.delegate = self;
+    
+    [alertView addGestureRecognizer:tapGesture];
 }
 
 - (void)adjustValue:(NSData *)data{

@@ -17,6 +17,7 @@
         self.AppVersion = [aDecoder decodeObjectForKey:@"AppVersion"];
         self.FirmwareUrl = [aDecoder decodeObjectForKey:@"FirmwareUrl"];
         self.FirmwareVersion = [aDecoder decodeObjectForKey:@"FirmwareVersion"];
+        self.localPath = [aDecoder decodeObjectForKey:@"localPath"];
     }
     return self;
 }
@@ -27,5 +28,6 @@
     [aCoder encodeObject:self.AppVersion forKey:@"AppVersion"];
     [aCoder encodeObject:self.FirmwareUrl forKey:@"FirmwareUrl"];
     [aCoder encodeObject:self.FirmwareVersion forKey:@"FirmwareVersion"];
+    [aCoder encodeObject:self.localPath forKey:@"localPath"];
 }
 @end

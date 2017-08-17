@@ -13,4 +13,5 @@
 @property (copy, nonatomic) NSString *AppVersion;
 @property (copy, nonatomic) NSString *FirmwareUrl;
 @property (copy, nonatomic) NSString *FirmwareVersion;
+@property (copy, nonatomic) NSString *localPath;
 @end
