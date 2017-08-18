@@ -31,6 +31,14 @@
 @end
 
 @implementation JDYAdjustViewController
+- (BOOL)shouldAutorotate{
+    
+    return NO;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskPortrait;
+}
 
 - (void)viewWillAppear:(BOOL)animated{
 

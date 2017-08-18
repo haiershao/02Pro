@@ -20,6 +20,7 @@
     JDYFinishAlertView *alertView = [self finishAlertView];
     alertView.frame = view.bounds;
     [view addSubview:alertView];
+    alertView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.5];
     return alertView;
 }
 - (IBAction)confirmBtnClick:(UIButton *)sender {

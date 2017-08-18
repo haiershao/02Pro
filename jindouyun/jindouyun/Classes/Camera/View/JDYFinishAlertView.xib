@@ -15,7 +15,7 @@
             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
             <subviews>
                 <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="dL3-nc-M83">
-                    <rect key="frame" x="50" y="233.5" width="275" height="199"/>
+                    <rect key="frame" x="50" y="234" width="275" height="199"/>
                     <subviews>
                         <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="RKM-sR-eYj">
                             <rect key="frame" x="20" y="36" width="235" height="80"/>
@@ -40,6 +40,7 @@
                         </view>
                         <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="okB-k3-a8G">
                             <rect key="frame" x="0.0" y="139" width="275" height="60"/>
+                            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                             <constraints>
                                 <constraint firstAttribute="height" constant="60" id="sDY-Pe-7Ct"/>
                             </constraints>
@@ -50,9 +51,20 @@
                                 <action selector="confirmBtnClick:" destination="aR4-Ww-L9o" eventType="touchUpInside" id="sYg-C6-bKe"/>
                             </connections>
                         </button>
+                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VU7-6S-wyI">
+                            <rect key="frame" x="0.0" y="138" width="275" height="1"/>
+                            <color key="backgroundColor" red="0.52549019610000003" green="0.52941176469999995" blue="0.5568627451" alpha="1" colorSpace="calibratedRGB"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="1" id="GGH-aU-kpL"/>
+                            </constraints>
+                            <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                            <nil key="textColor"/>
+                            <nil key="highlightedColor"/>
+                        </label>
                     </subviews>
                     <color key="backgroundColor" red="0.1450980392" green="0.1529411765" blue="0.1960784314" alpha="1" colorSpace="calibratedRGB"/>
                     <constraints>
+                        <constraint firstAttribute="trailing" secondItem="VU7-6S-wyI" secondAttribute="trailing" id="3xx-oi-efa"/>
                         <constraint firstAttribute="bottom" secondItem="okB-k3-a8G" secondAttribute="bottom" id="95j-4B-NVE"/>
                         <constraint firstAttribute="width" constant="275" id="9pP-nk-YBd"/>
                         <constraint firstAttribute="trailing" secondItem="okB-k3-a8G" secondAttribute="trailing" id="HGE-EP-efB"/>
@@ -60,6 +72,8 @@
                         <constraint firstItem="RKM-sR-eYj" firstAttribute="top" secondItem="dL3-nc-M83" secondAttribute="top" constant="36" id="ZbJ-M0-CUD"/>
                         <constraint firstItem="RKM-sR-eYj" firstAttribute="leading" secondItem="dL3-nc-M83" secondAttribute="leading" constant="20" id="f2Y-71-raQ"/>
                         <constraint firstAttribute="trailing" secondItem="RKM-sR-eYj" secondAttribute="trailing" constant="20" id="i43-rN-Gym"/>
+                        <constraint firstItem="okB-k3-a8G" firstAttribute="top" secondItem="VU7-6S-wyI" secondAttribute="bottom" id="jVe-ZZ-AFS"/>
+                        <constraint firstItem="VU7-6S-wyI" firstAttribute="leading" secondItem="dL3-nc-M83" secondAttribute="leading" id="soz-Pe-ub9"/>
                         <constraint firstAttribute="height" constant="199" id="tLK-Cp-rVp"/>
                     </constraints>
                 </view>
@@ -72,7 +86,7 @@
             <connections>
                 <outlet property="alertInfoLabel" destination="Lgl-87-hCB" id="kLq-eN-J6x"/>
             </connections>
-            <point key="canvasLocation" x="-288.5" y="54.5"/>
+            <point key="canvasLocation" x="-247.5" y="57.5"/>
         </view>
         <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
     </objects>

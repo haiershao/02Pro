@@ -23,6 +23,7 @@
 #import "LHGradientProgress.h"
 #import <AFNetworking.h>
 #import "JDYFirmWareFile.h"
+#import "JDYFinishAlertView.h"
 
 #define channelOnCharacteristicView @"CharacteristicView"
 #define channelOnPeropheralView @"peripheralView"
@@ -69,6 +70,7 @@ typedef void(^onfinish)(BOOL finish);
     BOOL isZend;
     long totalCount;
     __block int heartFlag;
+    _Bool startUpdate;
 }
 @property (weak, nonatomic) UIView *coverView;
 @property (strong, nonatomic) NSMutableArray *peripheralDataArray;
@@ -110,6 +112,7 @@ typedef void(^onfinish)(BOOL finish);
 @property (weak, nonatomic) IBOutlet UILabel *headingAxisLabel;
 @property (weak, nonatomic) JDYAdjustAlertView *alertView;
 @property (weak, nonatomic) JDYAdjustProgressAlertView *progressAlertView;
+@property (weak, nonatomic) JDYFinishAlertView *finishAlertView;
 @property (assign, nonatomic) int isNext;
 @property (copy  , nonatomic) dispatch_queue_t updateFilequeue;
 @property (copy  , nonatomic) dispatch_queue_t updateFilequeueY;
@@ -206,22 +209,31 @@ static dispatch_source_t _heartBeatTimer;
     return _jsonFiles;
 }
 
+- (BOOL)shouldAutorotate{
+
+    return NO;
+}
+
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskPortrait;
+}
+
 - (void)viewWillAppear:(BOOL)animated{
     
     [super viewWillAppear:animated];
     self.navigationItem.rightBarButtonItem = [UIBarButtonItem itemWithImage:@"camera" highImage:@"cameraH" target:self action:@selector(cameraClick)];
     
     [self setNotifiy];
-    Byte b[5] = {0XAA,0X60,0X02,0X01,0X01};
-    [self writeValue:b length:sizeof(b)];
-    [[NSOperationQueue new] addOperationWithBlock:^{
-        
-        [self sendValue];
-    }];
+    if (!startUpdate) {
     
+        Byte b[5] = {0XAA,0X60,0X02,0X01,0X01};
+        [self writeValue:b length:sizeof(b)];
+        [[NSOperationQueue new] addOperationWithBlock:^{
     
-    
-    
+            [self sendValue];
+        }];
+    }
+
     NSLog(@"viewWillAppear %@",self.joystick);
 }
 
@@ -250,8 +262,12 @@ static dispatch_source_t _heartBeatTimer;
 - (void)viewDidDisappear:(BOOL)animated{
     
     [super viewDidDisappear:animated];
-    Byte b[5] = {0XAA,0X60,0X02,0X00,0X00};
-    [self writeValue:b length:sizeof(b)];
+    if (!startUpdate) {
+      
+        Byte b[5] = {0XAA,0X60,0X02,0X00,0X00};
+        [self writeValue:b length:sizeof(b)];
+    }
+
     
 }
 
@@ -270,7 +286,7 @@ static dispatch_source_t _heartBeatTimer;
     mainRow = 0;
     rockerArr = nil;
     testArr = @[@"1",@"2"];
-    unit = 128;
+    unit = 512;
     unit1 = 17;
     testStr = @"oooo";
     isUpdateX = NO;
@@ -287,6 +303,7 @@ static dispatch_source_t _heartBeatTimer;
     isZend = NO;
     totalCount = 0;
     heartFlag = 3;
+    startUpdate = NO;
 
     
     
@@ -303,8 +320,10 @@ static dispatch_source_t _heartBeatTimer;
     [self babyDelegate];
     
     //3秒没收到姿态角，判定蓝牙断开
-    [self heartBeat];
-
+    if (startUpdate) {
+       [self heartBeat];
+    }
+    
     [self setUpBatteryView];
     
     
@@ -320,7 +339,6 @@ static dispatch_source_t _heartBeatTimer;
 }
 
 - (void)checkoutVersion{
-
     
     AFHTTPSessionManager *manager = [AFHTTPSessionManager manager];
     NSDictionary *dic  = [NSDictionary dictionary];
@@ -421,14 +439,24 @@ static dispatch_source_t _heartBeatTimer;
          */
         NSLog(@"filePath %@ -- %@",filePath, error);
         if (error) {
-            [SVProgressHUD showInfoWithStatus:@"固件下载失败"];
+//            [SVProgressHUD showInfoWithStatus:@"固件下载失败"];
+            [self setUpAlertView:@"固件下载失败"];
         }else{
         
             NSData *data = [NSData dataWithContentsOfFile:(NSString *)filePath];
             
             if ([data writeToFile:localPath atomically:YES]) {
                 NSLog(@"localPath 写入成功");
-#warning 发指令重启升级明天做
+
+                
+                if (self.characteristic1 != nil && self.peripheral.state == CBPeripheralStateConnected) {
+                    //关机设备
+//                    Byte b[5] = {0XAA,0X5b,0X02,0X01,0X01};
+//                    [self writeValue:b length:sizeof(b)];
+                    [self setUpAlertView:@"设备关机，请打开设备"];
+                    [baby cancelAllPeripheralsConnection];
+                    [baby AutoReconnect:self.peripheral];
+                }
             }else{
                 
                 NSLog(@"localPath 写入失败");
@@ -486,10 +514,10 @@ static dispatch_source_t _heartBeatTimer;
         NSData *rockerData = [self convertHexStrToData:tempStr];
         Byte *rockerByte = (Byte *)[rockerData bytes];
         
-        NSLog(@"==================");
-        for (int i = 0; i<6; i++) {
-            NSLog(@"rockerArr %x",rockerByte[i]);
-        }
+//        NSLog(@"==================");
+//        for (int i = 0; i<6; i++) {
+//            NSLog(@"rockerArr %x",rockerByte[i]);
+//        }
         [self writeValue:rockerByte length:6];
     });
     
@@ -510,7 +538,7 @@ static dispatch_source_t _heartBeatTimer;
             if (self.peripheral.state == CBPeripheralStateConnected) {
             
                 heartFlag --;
-                NSLog(@"heartFlag -- %d",heartFlag);
+//                NSLog(@"heartFlag -- %d",heartFlag);
             }
             
             
@@ -578,6 +606,10 @@ static dispatch_source_t _heartBeatTimer;
 
 - (void)rockViewCell:(UITapGestureRecognizer*)gesture{
     [SVProgressHUD dismiss];
+    if (self.peripheral.state == CBPeripheralStateDisconnected) {
+        [self setUpAlertView:@"请连接设备"];
+        return;
+    }
     JDYRockerSensitivityView *rockView = [JDYRockerSensitivityView rockerSensitivityView];
     rockView.width = screenW;
     rockView.height = screenH;
@@ -604,6 +636,10 @@ static dispatch_source_t _heartBeatTimer;
 
 - (void)xyzViewCell:(UITapGestureRecognizer*)gesture{
     [SVProgressHUD dismiss];
+    if (self.peripheral.state == CBPeripheralStateDisconnected) {
+        [self setUpAlertView:@"请连接设备"];
+        return;
+    }
     JDYXYZAxisView *AxisView = [JDYXYZAxisView XYZAxisView];
     AxisView.width = screenW;
     AxisView.height = screenH;
@@ -885,11 +921,10 @@ static dispatch_source_t _heartBeatTimer;
 
 - (IBAction)adjustBtnClick:(UIButton *)sender {
     
-//    if (self.peripheral.state == CBPeripheralStateDisconnected) {
-//        [SVProgressHUD showInfoWithStatus:[NSString stringWithFormat:@"未连接设备"]];
-//        return;
-//    
-//    }
+    if (self.peripheral.state == CBPeripheralStateDisconnected) {
+        [self setUpAlertView:@"请连接设备"];
+        return;
+    }
     
     JDYAdjustViewController *adjustVc = [JDYAdjustViewController adjustViewController];
     adjustVc.view.frame = CGRectMake(0, 0, screenW, screenH);
@@ -1173,7 +1208,7 @@ static dispatch_source_t _heartBeatTimer;
     //设置读取characteristics的委托
     [baby setBlockOnReadValueForCharacteristicAtChannel:channelOnPeropheralView block:^(CBPeripheral *peripheral, CBCharacteristic *characteristics, NSError *error) {
         NSLog(@"characteristic name:%@ value is:%@",characteristics.UUID,characteristics.value);
-        
+        weakSelf.coverView.hidden = YES;
         NSInteger i = 0;
         for (CBService *s in peripheral.services) {
             i++;
@@ -1197,7 +1232,7 @@ static dispatch_source_t _heartBeatTimer;
                 adjustVc.services = weakSelf.services;
                 NSLog(@"weakSelf.peripheral %@--%@",weakSelf.peripheral.services,adjustVc.baby);
                 [weakSelf.laAnimation1 removeFromSuperview];
-                [weakSelf presentViewController:adjustVc animated:NO completion:nil];
+//                [weakSelf presentViewController:adjustVc animated:NO completion:nil];
             });
             
         }
@@ -1265,11 +1300,39 @@ static dispatch_source_t _heartBeatTimer;
 
 - (IBAction)updateBtnClick:(UIButton *)sender {
 
-    if (self.characteristic1 != nil) {
-        [self getHaardWareVersion];
+    
+    
+    if (self.peripheral.state == CBPeripheralStateConnected) {
+       
+        [self updatingAlertView:@"检查跟更新中..."];
+        
+        if (self.characteristic1 != nil) {
+            [self getHaardWareVersion];
+            [self checkoutVersion];
+            
+        }else{
+        
+            [self setUpAlertView:@"设备连接异常，请重新连接"];
+        }
+    }else{
+    
+        [self setUpAlertView:@"请连接设备"];
     }
     
     
+    
+//    isUpdateX = YES;
+//    startUpdate = YES;
+//    [self startSendX];
+}
+
+- (void)setUpAlertView:(NSString *)contentStr{
+
+    if (self.finishAlertView) {
+        [self.finishAlertView removeFromSuperview];
+    }
+    self.finishAlertView = [JDYFinishAlertView showInView:self.view];
+    self.finishAlertView.alertInfoLabel.text = contentStr;
 }
 
 - (void)adjustAlertViewClick:(UITapGestureRecognizer*)gesture{
@@ -1285,11 +1348,11 @@ static dispatch_source_t _heartBeatTimer;
     }
 }
 
-- (void)updatingAlertView{
+- (void)updatingAlertView:(NSString *)contentStr{
 
         self.progressAlertView = [JDYAdjustProgressAlertView showInView:self.view];
         self.progressAlertView.backgroundColor = [[UIColor blackColor] colorWithAlphaComponent:0.5];
-        self.progressAlertView.alertInfoLabel.text = @"正在升级中...";
+        self.progressAlertView.alertInfoLabel.text = contentStr;
         LHGradientProgress *gradProg = [LHGradientProgress sharedInstance];
 
         CGFloat gradProgW = self.progressAlertView.progressView.width;
@@ -1300,7 +1363,7 @@ static dispatch_source_t _heartBeatTimer;
         [gradProg showOnParent:self.progressAlertView.progressView position:LHProgressPosDown];
         [gradProg setProgress:1];
         [gradProg simulateProgress];
-        [self startSendX];
+//        [self startSendX];
 }
 
 - (void)nextUpdate0{
@@ -1359,7 +1422,7 @@ static dispatch_source_t _heartBeatTimer;
         NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
         [self.peripheral writeValue:data0 forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
         self.isNext = 3;
-        NSLog(@" writeValue1-> %@",data0);
+        NSLog(@"writeValue1-> %@",data0);
     }
 }
 
@@ -1370,7 +1433,7 @@ static dispatch_source_t _heartBeatTimer;
     NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
     [self.peripheral writeValue:data0 forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
     self.isNext = 8;
-    NSLog(@" writeValueY1-> %@",data0);
+    NSLog(@"writeValueY1-> %@",data0);
     
 }
 
@@ -1459,10 +1522,10 @@ static dispatch_source_t _heartBeatTimer;
             [self binFileUnpack:fileByte blockLength:blockLength  onComplete:^(Byte *blockFileByte, long fileLength) {
                 Byte FileByte[fileLength];
                 blockLength += fileLength;
-                for (int i = 0; i< fileLength; i++) {
-                    FileByte[i] = blockFileByte[i];
-                    //            NSLog(@"binFileUnpack 一 fileByte= %x -- %d",FileByte[i], i);
-                }
+//                for (int i = 0; i< fileLength; i++) {
+//                    FileByte[i] = blockFileByte[i];
+//                                NSLog(@"binFileUnpack 一 fileByte= %x -- %d",FileByte[i], i);
+//                }
                 
                 
                 [self unpackDataFileByte0:blockFileByte fileByteLength0:fileLength];
@@ -1616,25 +1679,32 @@ static dispatch_source_t _heartBeatTimer;
      NSData *unData = [UserDefaults objectForKey:FirmwareVersionKey];
      JDYFirmWareFile *unmodel = [NSKeyedUnarchiver unarchiveObjectWithData:unData];
      NSLog(@"fileModel %@",unmodel.localPath);
+    if ([[NSFileManager defaultManager] fileExistsAtPath:unmodel.localPath]) {
+        NSData *data = [NSData dataWithContentsOfFile:unmodel.localPath];
+        if (data) {
+            self.updataFileData = data;
+            
+            NSLog(@" 开始升级");
+            [self updatingAlertView:@"正在升级中..."];
     
-    NSData *data = [NSData dataWithContentsOfFile:unmodel.localPath];
-    if (data) {
-        self.updataFileData = data;
-        
-        NSLog(@" 开始升级");
-        [self updatingAlertView];
-        
-        if (isUpdateX) {
-            Byte b[] = {0xaa,0x5a,0x03,0xbb,0x66,0x13};
-            NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
-            [self.peripheral writeValue:data0 forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
-            self.isNext = 1;
-            NSLog(@" writeValue-> %@",data0);
+            if (isUpdateX) {
+                Byte b[] = {0xaa,0x5a,0x03,0xbb,0x66,0x13};
+                NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
+                [self.peripheral writeValue:data0 forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
+                self.isNext = 1;
+                NSLog(@" writeValue-> %@",data0);
+            }
+        }else{
+            
+//            [SVProgressHUD showInfoWithStatus:@"固件已损毁"];
+            [self setUpAlertView:@"固件已损毁"];
         }
     }else{
     
-        [SVProgressHUD showInfoWithStatus:@"固件不存在了"];
+        [self setUpAlertView:@"固件不存在了"];
+//        [SVProgressHUD showInfoWithStatus:@"固件不存在了"];
     }
+   
     
 }
 
@@ -1718,147 +1788,273 @@ static dispatch_source_t _heartBeatTimer;
 }
 
 - (void)unpackDataFileByte0:(Byte [])fileByte0 fileByteLength0:(long)fileByteLength0{
+//    for (int i = 0; i< fileByteLength0; i++) {
+////        FileByte[i] = blockFileByte[i];
+//        NSLog(@"fileByte0 一 fileByte= %x -- %d",fileByte0[i], i);
+//        if (i<516) {
+//            NSLog(@"-----------------------------");
+//        }
+//    }
+
     
-    int index = 0;
-    long subLength = 1;
-    while (index < fileByteLength0) {
+    __weak typeof(self)weakSelf = self;
+    @autoreleasepool {
+        //        NSLog(@"%ld",fileByteLength0);
+        int index = 0;
+        long subLength = 1;
+        int h = 0;
         
-        Byte bigFileByte[131] ={0xaa};
-        bigFileByte[0] = 0x27;
-        if (index + unit >= fileByteLength0) {//走到这里时fileByte0数组里的元素不足128了，所以bigFileByte需要重新分配length那么多的空间
-            long length = fileByteLength0 - index;
-            subLength = length + 3;
-            memset(bigFileByte, 0, length+3);
-            //                Byte bigFileByte[length + 3];
+        //        NSLog(@"--------->>>>>start send data 1");
+        while (index < fileByteLength0) {
+            Byte bigFileByte[515];
             bigFileByte[0] = 0x27;
-            bigFileByte[1] = (Byte)(fileByteLength0 - index);
-            NSLog(@"sizeof %x",(Byte)(fileByteLength0 - index));
-            NSLog(@"sizeof bigFileByte %lu",sizeof(bigFileByte));
-            for (int i = 2; i< length + 2; i++) {//91 FB 63 58 5C 最后4个数
-                
-                bigFileByte[i] = fileByte0[index + i - 2];
-                
-            }
-            bigFileByte[length + 3 - 1] = 0x20;
-            NSLog(@"最后一个%x",bigFileByte[length + 3 - 2]);
-            //                memset(leftByte, 0, length+3);
-            
-            Byte tempByte[length + 3];
-            for (int i= 0; i<length+3; i++) {
-                tempByte[i] = bigFileByte[i];
-                NSLog(@"unpack 不足128的数组%x -- %d\n",bigFileByte[i], i);
-            }
-            
-        }else{
-            
-            bigFileByte[1] = 0x80;
-            for (int i = 2; i<unit + 2; i++) {
-                
-                bigFileByte[i] = fileByte0[index + i - 2];
-            }
-            
-            bigFileByte[130] = 0x20;
-            
-        }
-        
-        
-        
-        if (index + unit>= fileByteLength0) {
-            
-            for (int i= 0; i<subLength; i++) {
-                NSLog(@"unpack XX外面输出%x -- %d -- %d\n",bigFileByte[i],index, i);
-            }
-        }
-        
-        NSLog(@"index %d",index);
-        while (true) {
-            
-            int length = sizeof(bigFileByte);
-            int xPos = 0;
-            if (index + unit>= fileByteLength0) {
-                
-                while (xPos < subLength) {
-                    Byte subbigFileByte[20];
-                    subbigFileByte[0] = 0xAA;
-                    subbigFileByte[1] = 0x5A;
-                    if (xPos + unit1 > subLength) {
-                        subbigFileByte[2] = (Byte)(length - xPos);
-                        long length1 = subLength - xPos;
-                        for (int i = 3; i<length1+3; i++) {
-                            subbigFileByte[i] = bigFileByte[xPos + i - 3];
-                            NSLog(@"unpack XX最后不足17的数组%x\n",subbigFileByte[i]);
-                            
-                        }
-                        
-                    }else{
-                        
-                        subbigFileByte[2] = 0x11;
-                        for (int i = 3; i<unit1 + 3; i++) {
-                            subbigFileByte[i] = bigFileByte[xPos + i - 3];
-                        }
-                    }
-                    xPos += unit1;
-                    NSLog(@"============================99");
+            if (index + unit >= fileByteLength0) {//走到这里时fileByte0数组里的元素不足512了，所以bigFileByte需要重新分配length那么多的空间
+                long length = fileByteLength0 - index;//数据长度
+                subLength = length + 3;
+                memset(bigFileByte, 0, length+3);
+                //                Byte bigFileByte[length + 3];
+                bigFileByte[0] = 0x27;
+                bigFileByte[1] = (Byte)((fileByteLength0 - index)/4);
+                //                NSLog(@"sizeof %x",(Byte)(fileByteLength0 - index));
+                //                NSLog(@"sizeof bigFileByte %lu",sizeof(bigFileByte));
+                //#if 1
+                for (int i = 2; i< length + 2; i++) {//91 FB 63 58 5C 最后4个数
+                    
+                    bigFileByte[i] = fileByte0[index + i - 2];
+                    
                 }
+                //#else
+                //
+                //                memcpy(bigFileByte + 2, fileByte0 + index, length);
+                //#endif
                 
-                NSLog(@"============================77%d",length);
+                bigFileByte[length + 3 - 1] = 0x20;
+                //                NSLog(@"最后一个%x",bigFileByte[length + 3 - 2]);
+                //                memset(leftByte, 0, length+3);
                 
-                break;
+                Byte tempByte[length + 3];
+                for (int i= 0; i<length+3; i++) {
+                    tempByte[i] = bigFileByte[i];
+                    //                    NSLog(@"unpack 不足512的数组%x -- %d\n",bigFileByte[i], i);
+                }
                 
             }else{
                 
-                while (xPos < length) {
-                    Byte subbigFileByte[20];
-                    subbigFileByte[0] = 0xAA;
-                    subbigFileByte[1] = 0x5A;
-                    if (xPos + unit1 > length) {
-                        subbigFileByte[2] = (Byte)(length - xPos);
-                        int length1 = length - xPos;
-                        for (int i = 3; i<length1+3; i++) {
-                            subbigFileByte[i] = bigFileByte[xPos + i - 3];
-                            NSLog(@"不足17的数组%x\n",subbigFileByte[i]);
-                            
-                        }
-                        
-                    }else{
-                        
-                        subbigFileByte[2] = 0x11;
-                        for (int i = 3; i<unit1 + 3; i++) {
-                            subbigFileByte[i] = bigFileByte[xPos + i - 3];
-                        }
-                        
-                        //                        NSLog(@"==========================================");
-                        //                        for (int i = 0; i<20; i++) {
-                        //                            NSLog(@"满128 满17 subbigFileByte %x\n",subbigFileByte[i]);
-                        //                        }
-                        
-                        NSData *data = [NSData dataWithBytes:subbigFileByte length:sizeof(subbigFileByte)];
-                        dispatch_semaphore_t sem = dispatch_semaphore_create(0);
-                        [self setNotifiyWriteValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse onFinish:^(BOOL finish) {
-                            //                                sleep(10);
-                            if (finish) {
-                                
-                                dispatch_semaphore_signal(sem);
-                            }
-                            
-                        }];
-                        
-                        
-                        dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, 10*NSEC_PER_SEC));
-                    }
-                    xPos += unit1;
-                    NSLog(@"============================99");
+                bigFileByte[1] = 0x80;
+                //#if 1
+                for (int i = 2; i<unit + 2; i++) {
+                    
+                    bigFileByte[i] = fileByte0[index + i - 2];
                 }
                 
-                NSLog(@"============================77%d",length);
                 
-                break;
+                //#else
+                //
+                //                memcpy(bigFileByte + 2, fileByte0 + index, unit);
+                //#endif
+                
+                bigFileByte[514] = 0x20;
+                
+//                for (int i= 0; i<515; i++) {
+//                    NSLog(@"bigFileByte %x -- %d -- %d\n",bigFileByte[i],index, i);
+//                }
+
+                
+                
+            }
+            
+            
+            
+            //            if (index + unit>= fileByteLength0) {
+            //
+            //                for (int i= 0; i<subLength; i++) {
+            //                    NSLog(@"unpack XX外面输出%x -- %d -- %d\n",bigFileByte[i],index, i);
+            //                }
+            //            }
+//            if (index <1) {
+//                for (int i= 0; i<515; i++) {
+//                    NSLog(@"unpack XX外面输出%x -- %d -- %d\n",bigFileByte[i],index, i);
+//                }
+//            }
+            
+            //            NSLog(@"index %d",index);
+            int t = 0;
+            
+            //            NSLog(@"--------->>>>>start send data 2");
+            while (true) {
+                int length = sizeof(bigFileByte);
+                
+                int xPos = 0;
+                int p = 0;
+                if (index + unit>= fileByteLength0) {
+                    
+                    //                    NSLog(@"--------->>>>>start send data 4");
+                    
+                    while (xPos < subLength) {//不满512
+                        
+                        Byte subbigFileByte[20];
+                        subbigFileByte[0] = 0xAA;
+                        subbigFileByte[1] = 0x5A;
+                        NSLog(@"subLength %ld",subLength);
+                        if (xPos + unit1 >= subLength) {//不满512 不满17
+                            subbigFileByte[2] = (Byte)(subLength - xPos);
+                            long length1 = subLength - xPos;
+                            for (int i = 3; i<length1+3; i++) {
+                                subbigFileByte[i] = bigFileByte[xPos + i - 3];
+                            }
+                            
+                            NSLog(@"4444=============================");
+                            for (int i = 0; i<length1+3; i++) {
+                                NSLog(@"最后一个数组 %x\n",subbigFileByte[i]);
+                                
+                            }
+                            
+                            NSData *data = [NSData dataWithBytes:subbigFileByte length:length1+3];
+                            [self setNotifiyWriteValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse onFinish:^(BOOL finish) {
+                                
+                                //                                if (finish) {
+                                //                                    isAllowSend = NO;
+                                weakSelf.isNext = 4;
+                                isFinish = NO;
+                                signal = NO;
+                                NSLog(@"结束了");
+                                //                                [NSThread sleepForTimeInterval:0.02f];
+                                //                                }
+                                
+                            }];
+                        }else{//不满512 满17
+                            
+                            subbigFileByte[2] = 0x11;
+                            for (int i = 3; i<unit1 + 3; i++) {
+                                subbigFileByte[i] = bigFileByte[xPos + i - 3];
+                            }
+                            
+                            //                            NSLog(@"3333=============================");
+                            //                            for (int i = 0; i<unit1+3; i++) {
+                            //                                NSLog(@"不满512 满17 %x -- %d",subbigFileByte[i],i);
+                            //                            }
+                            
+                            NSData *data = [NSData dataWithBytes:subbigFileByte length:unit1 + 3];
+                            [self setNotifiyWriteValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse onFinish:^(BOOL finish) {
+                                if (finish && xPos == subLength) {
+                                    //                               isAllowSend = NO;
+                                }
+                                
+                            }];
+                        }
+                        
+                        //                        if (xPos + unit1 >= subLength) {
+                        //                            //                        self.isNext = 0;
+                        //                            isAllowSend = NO;
+                        //                            if(isUpdateX){
+                        //
+                        //                                self.isNext = 4;
+                        //                            }
+                        //
+                        //                            NSLog(@"结束了");
+                        //                        }
+                        xPos += unit1;
+                    }
+                    
+                    //                    NSLog(@"--------->>>>>start send data 5");
+                    
+                    break;
+                    
+                }else{
+                    int j = 0;
+                    
+                    while (xPos < length) {//满512
+                        Byte subbigFileByte[20];
+                        subbigFileByte[0] = 0xAA;
+                        subbigFileByte[1] = 0x5A;
+                        
+                        if (xPos + unit1 >= length) {//满512 不满17
+                            subbigFileByte[2] = (Byte)(length - xPos);
+                            int length1 = length - xPos;
+                            //                            NSLog(@"%x -- %x",subbigFileByte[0],subbigFileByte[1]);
+                            
+                            for (int i = 3; i<length1+3; i++) {
+                                subbigFileByte[i] = bigFileByte[xPos + i - 3];
+                                
+                            }
+                            
+                                                        NSLog(@"2222=============================");
+                                                        for (int i = 0; i<length1+3; i++) {
+                                                            NSLog(@"满512 不满17 %x -- %d\n",subbigFileByte[i],i);
+                            
+                                                        }
+                                                        NSLog(@"满512 不满17==========================================%d \n",p++);
+                            
+                            NSData *data = [NSData dataWithBytes:subbigFileByte length:length1+3];
+                            [self setNotifiyWriteValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse onFinish:^(BOOL finish) {
+                                if (finish) {
+                                    
+                                }
+                                
+                            }];
+                            
+                        }else{//满512 满17
+                            
+                            subbigFileByte[2] = 0x11;
+                            for (int i = 3; i<unit1 + 3; i++) {
+                                subbigFileByte[i] = bigFileByte[xPos + i - 3];
+                            }
+                            
+                            NSLog(@"1111====================================%d",j++);
+                            for (int i = 0; i<20; i++) {
+                                NSLog(@"满512 满17 subbigFileByte %x -- %d\n",subbigFileByte[i],i);
+                            }
+                            
+                            NSData *data = [NSData dataWithBytes:subbigFileByte length:sizeof(subbigFileByte)];
+                            if (!_seam) {
+                                _seam = dispatch_semaphore_create(0);
+                            }
+                            //                            NSLog(@"<<<<<=========================>>>>>>2");
+                            [self setNotifiyWriteValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse onFinish:^(BOOL finish) {
+                                if (finish) {
+                                    
+                                    
+                                }
+                                
+                            }];
+                            //                            NSLog(@"<<<<<=========================>>>>>>1");
+                        }
+                        xPos += unit1;
+                        //                        NSLog(@"============================99");
+                    }
+                    
+                    //                    NSLog(@"============================77%d",t++);
+                    
+                    break;
+                }
+                
+            }
+            
+            //            NSLog(@"--------->>>>>start send data 3");
+            
+            //美512才会回复
+            //            dispatch_semaphore_wait(_seam, dispatch_time(DISPATCH_TIME_NOW, 1*NSEC_PER_SEC));
+            if (!isXend) {
+                NSLog(@"dispatch_semaphore_wait_X--->1");
+                //                dispatch_semaphore_wait(_seam, dispatch_time(DISPATCH_TIME_NOW, 5.0*NSEC_PER_SEC));
+                dispatch_semaphore_wait(_seam, DISPATCH_TIME_FOREVER);
+                NSLog(@"dispatch_semaphore_wait_X--->2");
+                if (isFinish) {
+                    isFinish = NO;
+                    index += unit;
+                }else{
+                    //                    NSLog(@"错了============================88-> %d",h++);
+                    index = index;
+                }
+                
+                //            if (index + unit>= fileByteLength0 && isFinish) {
+                //                self.isNext = 4;
+                //                NSLog(@"结束了");
+                //            }
+                //                NSLog(@"============================88-> %d--%d",h++,isFinish);
             }
             
         }
-        index += unit;
-        
-        NSLog(@"============================88");
     }
 }
 
@@ -1885,11 +2081,17 @@ static dispatch_source_t _heartBeatTimer;
                 bigFileByte[1] = (Byte)((fileByteLength0 - index)/4);
                 //                NSLog(@"sizeof %x",(Byte)(fileByteLength0 - index));
                 //                NSLog(@"sizeof bigFileByte %lu",sizeof(bigFileByte));
+                //#if 1
                 for (int i = 2; i< length + 2; i++) {//91 FB 63 58 5C 最后4个数
                     
                     bigFileByte[i] = fileByte0[index + i - 2];
                     
                 }
+                //#else
+                //
+                //                memcpy(bigFileByte + 2, fileByte0 + index, length);
+                //#endif
+                
                 bigFileByte[length + 3 - 1] = 0x20;
                 //                NSLog(@"最后一个%x",bigFileByte[length + 3 - 2]);
                 //                memset(leftByte, 0, length+3);
@@ -1903,10 +2105,15 @@ static dispatch_source_t _heartBeatTimer;
             }else{
                 
                 bigFileByte[1] = 0x80;
+                //#if 1
                 for (int i = 2; i<unit + 2; i++) {
                     
                     bigFileByte[i] = fileByte0[index + i - 2];
                 }
+                //#else
+                //
+                //                memcpy(bigFileByte + 2, fileByte0 + index, unit);
+                //#endif
                 
                 bigFileByte[514] = 0x20;
                 
@@ -2071,8 +2278,10 @@ static dispatch_source_t _heartBeatTimer;
             //美512才会回复 22816
             //            dispatch_semaphore_wait(_seam, dispatch_time(DISPATCH_TIME_NOW, 1*NSEC_PER_SEC));
             if (!isYend) {
-                
+                NSLog(@"dispatch_semaphore_wait_Y--->1");
+                //                dispatch_semaphore_wait(_seamY, dispatch_time(DISPATCH_TIME_NOW, 5.0*NSEC_PER_SEC));
                 dispatch_semaphore_wait(_seamY, DISPATCH_TIME_FOREVER);
+                NSLog(@"dispatch_semaphore_wait_X--->2");
                 if (isFinish) {
                     isFinish = NO;
                     index += unit;
@@ -2085,6 +2294,7 @@ static dispatch_source_t _heartBeatTimer;
             
         }
     }
+
     
 }
 
@@ -2111,11 +2321,16 @@ static dispatch_source_t _heartBeatTimer;
                 bigFileByte[1] = (Byte)((fileByteLength0 - index)/4);
                 //                NSLog(@"sizeof %x",(Byte)(fileByteLength0 - index));
                 //                NSLog(@"sizeof bigFileByte %lu",sizeof(bigFileByte));
+                //#if 1
                 for (int i = 2; i< length + 2; i++) {//91 FB 63 58 5C 最后4个数
                     
                     bigFileByte[i] = fileByte0[index + i - 2];
                     
                 }
+                //#else
+                //
+                //                memcpy(bigFileByte + 2, fileByte0 + index, length);
+                //#endif
                 bigFileByte[length + 3 - 1] = 0x20;
                 //                NSLog(@"最后一个%x",bigFileByte[length + 3 - 2]);
                 //                memset(leftByte, 0, length+3);
@@ -2129,10 +2344,15 @@ static dispatch_source_t _heartBeatTimer;
             }else{
                 
                 bigFileByte[1] = 0x80;
+                //#if 1
                 for (int i = 2; i<unit + 2; i++) {
                     
                     bigFileByte[i] = fileByte0[index + i - 2];
                 }
+                //#else
+                //
+                //                memcpy(bigFileByte + 2, fileByte0 + index, unit);
+                //#endif
                 
                 bigFileByte[514] = 0x20;
                 
@@ -2298,7 +2518,10 @@ static dispatch_source_t _heartBeatTimer;
             //            dispatch_semaphore_wait(_seam, dispatch_time(DISPATCH_TIME_NOW, 1*NSEC_PER_SEC));
             if (!isZend) {
                 
+                NSLog(@"dispatch_semaphore_wait_Z--->1");
+                //                dispatch_semaphore_wait(_seamZ, dispatch_time(DISPATCH_TIME_NOW, 5.0*NSEC_PER_SEC));
                 dispatch_semaphore_wait(_seamZ, DISPATCH_TIME_FOREVER);
+                NSLog(@"dispatch_semaphore_wait_Z--->2");
                 if (isFinish) {
                     isFinish = NO;
                     index += unit;
@@ -2317,26 +2540,27 @@ static dispatch_source_t _heartBeatTimer;
 -(void)setNotifiyWriteValue:(NSData *)data forCharacteristic:(CBCharacteristic *)characteristic type:(CBCharacteristicWriteType)type onFinish:(onfinish)finish{
     
     
-    if (isUpdateX) {
-        while (true) {
-            Byte b[] = {0xaa,0x5a,0x03,0xbb,0x66,0x13};
-            NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
-            [self.peripheral writeValue:data0 forCharacteristic:characteristic type:CBCharacteristicWriteWithoutResponse];
-            if ([flagStr isEqualToString:@"55ae0312 1022"] || flag == 100) {
-                flagStr = @"";
-                flag = 0;
-                isUpdateX = NO;
-                break;
-            }else{
-                
-                flag ++;
-            }
-            
-        }
-        
-    }
-    //    [self.peripheral writeValue:data forCharacteristic:characteristic type:CBCharacteristicWriteWithoutResponse];
-    NSLog(@"WriteValue-> %@ %@\n",data,characteristic.UUID);
+    //    if (!_subDataWriteOK) {
+    //        _subDataWriteOK = dispatch_semaphore_create(0);
+    //    }
+    
+    //    NSLog(@"<<<<<=========================>>>>>>3");
+    //    if (!) {
+    //
+    //    }
+    //    BOOL canBe = [[self->baby peripheralManager] updateValue:data forCharacteristic:self.mutCharacteristic onSubscribedCentrals:nil];
+    //    NSLog(@"<<<<<<<========%d=========>>>>>>", canBe);
+    [self.peripheral writeValue:data forCharacteristic:characteristic type:CBCharacteristicWriteWithoutResponse];
+    //    NSLog(@"--------->>>dispatch_semaphore_wait_write_OK_1");
+    //    dispatch_semaphore_wait(_subDataWriteOK, DISPATCH_TIME_FOREVER);
+    //    NSLog(@"--------->>>dispatch_semaphore_wait_write_OK_2");
+    //    sleep(0.03);
+    //    NSLog(@"<<<<<=========================>>>>>>4");
+    usleep(10*1000);
+    //    NSLog(@"<<<<<=========================>>>>>>5");
+    //    [self.peripheral discoverDescriptorsForCharacteristic:characteristic];
+    totalCount += data.length-3;
+    NSLog(@"WriteValue-> %@ %@--%ld\n",data,characteristic.UUID,totalCount);
     finish(YES);
 }
 
@@ -2421,171 +2645,202 @@ static dispatch_source_t _heartBeatTimer;
                                      NSLog(@"--%@",str);
                                      self.hardWareVersionStr = [temp substringWithRange:range];
                                      
-                                     [self checkoutVersion];
+//                                     [self checkoutVersion];
                                  }
                                  
-                                 flagStr = temp;
-                                 if ([flagStr isEqualToString:@"55ae0312 1022"]) {
-                                     isFinish = YES;
-                                     if (weakSelf.isNext == 1) {
-                                         weakSelf.isNext = 0;
-                                         dispatch_sync(weakSelf.updateFilequeue, ^{
-                                             
-                                             [weakSelf nextUpdate0];
-                                         });
+                                 
+                                 if (startUpdate) {
+                                     flagStr = temp;
+                                     
+                                     if ([flagStr isEqualToString:@"55ae0312 1022"]) {
                                          
-                                         isAllowSend = NO;
-                                     }else if(weakSelf.isNext == 2){
-                                         weakSelf.isNext = 0;
-                                         isAllowSend = NO;
-                                         dispatch_sync(weakSelf.updateFilequeue, ^{
-                                             [weakSelf nextUpdate1];
-                                         });
-                                         
-                                         
-                                     }else if(weakSelf.isNext == 3){
-                                         if (!signal) {
-                                             signal = YES;
-                                             //                                            weakSelf.isNext = 0;
-                                             dispatch_async(weakSelf.updateFilequeue, ^{
-                                                 //                                                weakSelf.isNext = 0;
-                                                 [weakSelf updateFile];
-                                             });
-                                             //                                                _seam = nil;
-                                         }else{
-                                             
-                                             //                                                if (_seam) {
-                                             //                                                    dispatch_semaphore_signal(_seam);
-                                             //                                                }
-                                         }
-                                         
-                                         
-                                     }else if(weakSelf.isNext == 4){
-                                         weakSelf.isNext = 0;
-                                         isAllowSend = NO;
-                                         //                isUpdateY = NO;
-                                         dispatch_sync(weakSelf.updateFilequeueY, ^{
-                                             
-                                             [weakSelf nextUpdate2];
-                                         });
-                                         
-                                         //                isUpdateY = YES;
-                                     }else if(weakSelf.isNext == 5){
-                                         NSLog(@"X 升级完毕");
-                                         totalCount = 0;
-                                         weakSelf.isNext = 0;
-                                         isAllowSend = NO;
-                                         isUpdateX = NO;
-                                         isXend = YES;
-                                         dispatch_sync(weakSelf.updateFilequeueY, ^{
-                                             
-                                             [self startSendY];
-                                         });
-                                         
-                                         
-                                     }else if (weakSelf.isNext == 6){
-                                         
-                                         weakSelf.isNext = 0;
-                                         
-                                         isAllowSend = NO;
-                                         dispatch_sync(weakSelf.updateFilequeueY, ^{
-                                             
-                                             [weakSelf nextUpdateY0];
-                                         });
-                                     }else if (weakSelf.isNext == 7){
-                                         
-                                         weakSelf.isNext = 0;
-                                         dispatch_sync(weakSelf.updateFilequeueY, ^{
-                                             
-                                             [weakSelf nextUpdateY1];
-                                         });
-                                         
-                                         isAllowSend = NO;
-                                     }else if (weakSelf.isNext == 8){
-                                         if (!signal) {
-                                             signal = YES;
-                                             isUpdateY = YES;
-                                             dispatch_async(weakSelf.updateFilequeueY, ^{
+                                         isFinish = YES;
+                                         if (weakSelf.isNext == 1) {
+                                             weakSelf.isNext = 0;
+                                             dispatch_sync(weakSelf.updateFilequeue, ^{
                                                  
-                                                 [weakSelf updateFileY];
+                                                 [weakSelf nextUpdate0];
                                              });
-                                         }
-                                         
-                                         
-                                     }else if (weakSelf.isNext == 9){
-                                         
-                                         weakSelf.isNext = 0;
-                                         isAllowSend = NO;
-                                         //                isUpdateY = NO;
-                                         dispatch_sync(weakSelf.updateFilequeueZ, ^{
                                              
-                                             [weakSelf nextUpdateY2];
-                                         });
-                                         
-                                         //                isUpdateY = YES;
-                                     }else if (weakSelf.isNext == 10){
-                                         NSLog(@"Y 升级完毕");
-                                         weakSelf.isNext = 0;
-                                         totalCount = 0;
-                                         isAllowSend = NO;
-                                         isUpdateY = NO;
-                                         isYend = YES;
-                                         //                                            isUpdateZ = YES;
-                                         dispatch_sync(weakSelf.updateFilequeueZ, ^{
+                                             isAllowSend = NO;
+                                         }else if(weakSelf.isNext == 2){
+                                             weakSelf.isNext = 0;
+                                             isAllowSend = NO;
+                                             dispatch_sync(weakSelf.updateFilequeue, ^{
+                                                 [weakSelf nextUpdate1];
+                                             });
                                              
-                                             [self startSendZ];
-                                         });
-                                     }else if (weakSelf.isNext == 11){
-                                         
-                                         weakSelf.isNext = 0;
-                                         
-                                         isAllowSend = NO;
-                                         dispatch_sync(weakSelf.updateFilequeueZ, ^{
                                              
-                                             [weakSelf nextUpdateZ0];
-                                         });
-                                     }else if (weakSelf.isNext == 12){
-                                         
-                                         weakSelf.isNext = 0;
-                                         dispatch_sync(weakSelf.updateFilequeueZ, ^{
-                                             
-                                             [weakSelf nextUpdateZ1];
-                                         });
-                                     }else if (weakSelf.isNext == 13){
-                                         
-                                         if (!signal) {
-                                             signal = YES;
-                                             isUpdateZ = YES;
-                                             dispatch_async(weakSelf.updateFilequeueZ, ^{
+                                         }else if(weakSelf.isNext == 3){
+                                             if (!signal) {
+                                                 signal = YES;
+                                                 //                                            weakSelf.isNext = 0;
+                                                 dispatch_async(weakSelf.updateFilequeue, ^{
+                                                     //                                                weakSelf.isNext = 0;
+                                                     [weakSelf updateFile];
+                                                 });
+                                                 //                                                _seam = nil;
+                                             }else{
                                                  
-                                                 [weakSelf updateFileZ];
-                                             });
-                                         }
-                                     }else if (weakSelf.isNext == 14){
-                                         
-                                         weakSelf.isNext = 0;
-                                         isAllowSend = NO;
-                                         //                isUpdateY = NO;
-                                         dispatch_sync(weakSelf.updateFilequeueZZ, ^{
+                                                 //                                                if (_seam) {
+                                                 //                                                    dispatch_semaphore_signal(_seam);
+                                                 //                                                }
+                                             }
                                              
-                                             [weakSelf nextUpdateZ2];
-                                         });
-                                     }else if (weakSelf.isNext == 15){
+                                             
+                                         }else if(weakSelf.isNext == 4){
+                                             weakSelf.isNext = 0;
+                                             isAllowSend = NO;
+                                             //                isUpdateY = NO;
+                                             dispatch_sync(weakSelf.updateFilequeueY, ^{
+                                                 
+                                                 [weakSelf nextUpdate2];
+                                             });
+                                             
+                                             //                isUpdateY = YES;
+                                         }else if(weakSelf.isNext == 5){
+                                             NSLog(@"X 升级完毕");
+                                             totalCount = 0;
+                                             weakSelf.isNext = 0;
+                                             isAllowSend = NO;
+                                             isUpdateX = NO;
+                                             isXend = YES;
+                                             dispatch_sync(weakSelf.updateFilequeueY, ^{
+                                                 
+                                                 [self startSendY];
+                                             });
+                                             
+                                             
+                                         }else if (weakSelf.isNext == 6){
+                                             
+                                             weakSelf.isNext = 0;
+                                             
+                                             isAllowSend = NO;
+                                             dispatch_sync(weakSelf.updateFilequeueY, ^{
+                                                 
+                                                 [weakSelf nextUpdateY0];
+                                             });
+                                         }else if (weakSelf.isNext == 7){
+                                             
+                                             weakSelf.isNext = 0;
+                                             dispatch_sync(weakSelf.updateFilequeueY, ^{
+                                                 
+                                                 [weakSelf nextUpdateY1];
+                                             });
+                                             
+                                             isAllowSend = NO;
+                                         }else if (weakSelf.isNext == 8){
+                                             if (!signal) {
+                                                 signal = YES;
+                                                 isUpdateY = YES;
+                                                 dispatch_async(weakSelf.updateFilequeueY, ^{
+                                                     
+                                                     [weakSelf updateFileY];
+                                                 });
+                                             }
+                                             
+                                             
+                                         }else if (weakSelf.isNext == 9){
+                                             
+                                             weakSelf.isNext = 0;
+                                             isAllowSend = NO;
+                                             //                isUpdateY = NO;
+                                             dispatch_sync(weakSelf.updateFilequeueZ, ^{
+                                                 
+                                                 [weakSelf nextUpdateY2];
+                                             });
+                                             
+                                             //                isUpdateY = YES;
+                                         }else if (weakSelf.isNext == 10){
+                                             NSLog(@"Y 升级完毕");
+                                             weakSelf.isNext = 0;
+                                             totalCount = 0;
+                                             isAllowSend = NO;
+                                             isUpdateY = NO;
+                                             isYend = YES;
+                                             //                                            isUpdateZ = YES;
+                                             dispatch_sync(weakSelf.updateFilequeueZ, ^{
+                                                 
+                                                 [self startSendZ];
+                                             });
+                                         }else if (weakSelf.isNext == 11){
+                                             
+                                             weakSelf.isNext = 0;
+                                             
+                                             isAllowSend = NO;
+                                             dispatch_sync(weakSelf.updateFilequeueZ, ^{
+                                                 
+                                                 [weakSelf nextUpdateZ0];
+                                             });
+                                         }else if (weakSelf.isNext == 12){
+                                             
+                                             weakSelf.isNext = 0;
+                                             dispatch_sync(weakSelf.updateFilequeueZ, ^{
+                                                 
+                                                 [weakSelf nextUpdateZ1];
+                                             });
+                                         }else if (weakSelf.isNext == 13){
+                                             
+                                             if (!signal) {
+                                                 signal = YES;
+                                                 isUpdateZ = YES;
+                                                 dispatch_async(weakSelf.updateFilequeueZ, ^{
+                                                     
+                                                     [weakSelf updateFileZ];
+                                                 });
+                                             }
+                                         }else if (weakSelf.isNext == 14){
+                                             
+                                             weakSelf.isNext = 0;
+                                             isAllowSend = NO;
+                                             //                isUpdateY = NO;
+                                             dispatch_sync(weakSelf.updateFilequeueZZ, ^{
+                                                 
+                                                 [weakSelf nextUpdateZ2];
+                                             });
+                                         }else if (weakSelf.isNext == 15){
+                                             
+                                             NSLog(@"Z 升级完毕");
+                                             weakSelf.isNext = 0;
+                                             isAllowSend = NO;
+                                             isUpdateZ = NO;
+                                             isZend = YES;
+                                             startUpdate = NO;
+                                             [weakSelf.laAnimation1 removeFromSuperview];
+                                             [weakSelf.progressAlertView removeFromSuperview];
+                                             UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"成功" message:@"更新完成"
+                                                                                            delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil];
+                                             [alert show];
+                                         }
+                                     }else{
                                          
-                                         NSLog(@"Z 升级完毕");
-                                         weakSelf.isNext = 0;
+                                         isFinish = NO;
                                          isAllowSend = NO;
-                                         isUpdateZ = NO;
-                                         isZend = YES;
-                                         [weakSelf.laAnimation1 removeFromSuperview];
-                                         [weakSelf.progressAlertView removeFromSuperview];
-                                         UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"成功" message:@"更新完成"
-                                                                                        delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil];
-                                         [alert show];
                                      }
+                                     
+                                     if (_seam && signal && !isXend) {
+                                         NSLog(@"dispatch_semaphore_signal_X1.1");
+                                         dispatch_semaphore_signal(_seam);
+                                         NSLog(@"dispatch_semaphore_signal_X1.2");
+                                     }
+                                     if (_seamY && signal && !isYend) {
+                                         NSLog(@"dispatch_semaphore_signal_Y1.1");
+                                         dispatch_semaphore_signal(_seamY);
+                                         NSLog(@"dispatch_semaphore_signal_Y1.12");
+                                     }
+                                     if (_seamZ && signal && !isZend) {
+                                         NSLog(@"dispatch_semaphore_signal_Z1.1");
+                                         dispatch_semaphore_signal(_seamZ);
+                                         NSLog(@"dispatch_semaphore_signal_Z1.2");
+                                     }
+                                     //                                 if (_seam) {
+                                     NSLog(@"setNotifiy: %d -- %d -- %d -- %@ -- %@ -- %@ \n",isFinish, weakSelf.isNext, isUpdateY,_seam, _seamY,_seamZ);
+                                     //                                 }
                                  }
                                  
-                             }
+                                 
+                                 
+                             }//收到回复
                              
                          }];
         }
@@ -2599,6 +2854,7 @@ static dispatch_source_t _heartBeatTimer;
 
 - (void)setUpNewVersion{
 
+    [self.progressAlertView removeFromSuperview];
     JDYAdjustAlertView *alertView = [JDYAdjustAlertView showInView:self.view];
     alertView.delegate = self;
     alertView.flagStr = @"updateBtnClick";
@@ -2720,12 +2976,12 @@ static dispatch_source_t _heartBeatTimer;
     
     //设置写数据成功的block
     [self->baby setBlockOnDidWriteValueForCharacteristicAtChannel:channelOnCharacteristicView block:^(CBCharacteristic *characteristic, NSError *error) {
-        NSLog(@"setBlockOnDidWriteValueForCharacteristicAtChannel characteristic:%@ and new value:%@",characteristic.UUID, characteristic.value);
-        
-        if (error) {
-            NSLog(@"WriteValueForCharacteristicAtChannel error%@",error);
-            
-        }
+//        NSLog(@"setBlockOnDidWriteValueForCharacteristicAtChannel characteristic:%@ and new value:%@",characteristic.UUID, characteristic.value);
+//        
+//        if (error) {
+//            NSLog(@"WriteValueForCharacteristicAtChannel error%@",error);
+//            
+//        }
         
     }];
     
@@ -2741,10 +2997,10 @@ static dispatch_source_t _heartBeatTimer;
 - (void)joyStick:(LHJoyStick *)joyStick position:(NSString *)positionStr speed:(NSString *)speedStr{
 
     if (self.peripheral.state == CBPeripheralStateDisconnected) {
-        [SVProgressHUD showInfoWithStatus:[NSString stringWithFormat:@"未连接设备"]];
+        [self setUpAlertView:@"请连接设备"];
         return;
-        
     }
+    
     NSLog(@"ViewController joyStick %@ -- %@",positionStr, speedStr);
     NSMutableArray *mutableArry = [NSMutableArray array];
     Byte tempArr[6];
@@ -3039,13 +3295,13 @@ static dispatch_source_t _heartBeatTimer;
 
         for (int i =0; i<length; i++) {
             value[i] = b[i];
-            NSLog(@"value %x",value[i]);
+//            NSLog(@"value %x",value[i]);
         }
         
         NSData *data = [NSData dataWithBytes:&value length:length];
         [self.peripheral writeValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithResponse];
         
-        NSLog(@"writeValue -> %@",data);
+//        NSLog(@"writeValue -> %@",data);
     }
     
 }
@@ -3106,6 +3362,11 @@ static dispatch_source_t _heartBeatTimer;
     return str;  
 }
 - (IBAction)restBtnClick:(UIButton *)sender {
+    
+    if (self.peripheral.state == CBPeripheralStateDisconnected) {
+        [self setUpAlertView:@"请连接设备"];
+        return;
+    }
     if (self.characteristic1 != nil) {
        
         Byte b[6] = {0XAA,0X5e,0X03,0X09,0X01,0x0a};
