@@ -21,6 +21,7 @@
 
 #define listCollectionCellCount 2
 #define FirmwareVersionKey @"FirmwareVersion"
+#define FirmwareNumFromHardWareKey @"FirmwareNumFromHardWare"
 
 #define JYNotificationCenter [NSNotificationCenter defaultCenter]
 #define JYLog(...) NSLog(__VA_ARGS__)

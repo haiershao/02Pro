@@ -71,6 +71,8 @@ typedef void(^onfinish)(BOOL finish);
     long totalCount;
     __block int heartFlag;
     _Bool startUpdate;
+    BOOL isSend;//是否已发送获取版本号
+    BOOL isJoy;//摇杆是否被触摸
 }
 @property (weak, nonatomic) UIView *coverView;
 @property (strong, nonatomic) NSMutableArray *peripheralDataArray;
@@ -123,6 +125,8 @@ typedef void(^onfinish)(BOOL finish);
 @property (nonatomic, strong) NSData *updataFileData;
 @property (strong, nonatomic) NSString *hardWareVersionStr;
 @property (strong, nonatomic) NSString *fileSavePath;
+@property (strong, nonatomic) NSString *positionStr;
+@property (weak, nonatomic) IBOutlet UIButton *searchButton;
 @end
 
 static NSString *searchCellID = @"searchCellID";
@@ -223,16 +227,6 @@ static dispatch_source_t _heartBeatTimer;
     [super viewWillAppear:animated];
     self.navigationItem.rightBarButtonItem = [UIBarButtonItem itemWithImage:@"camera" highImage:@"cameraH" target:self action:@selector(cameraClick)];
     
-    [self setNotifiy];
-    if (!startUpdate) {
-    
-        Byte b[5] = {0XAA,0X60,0X02,0X01,0X01};
-        [self writeValue:b length:sizeof(b)];
-        [[NSOperationQueue new] addOperationWithBlock:^{
-    
-            [self sendValue];
-        }];
-    }
 
     NSLog(@"viewWillAppear %@",self.joystick);
 }
@@ -304,6 +298,9 @@ static dispatch_source_t _heartBeatTimer;
     totalCount = 0;
     heartFlag = 3;
     startUpdate = NO;
+    isSend = NO;
+    isJoy = NO;
+    self.positionStr = @"";
 
     
     
@@ -327,7 +324,7 @@ static dispatch_source_t _heartBeatTimer;
     [self setUpBatteryView];
     
     
-    
+   
 
     /////////////
 }
@@ -367,10 +364,12 @@ static dispatch_source_t _heartBeatTimer;
 //         NSData *unData = [UserDefaults objectForKey:FirmwareVersionKey];
 //         JDYFirmWareFile *unmodel = [NSKeyedUnarchiver unarchiveObjectWithData:unData];
 //         NSLog(@"fileModel %@",unmodel.FirmwareUrl);
+         NSUserDefaults *numUserDefaults = [NSUserDefaults standardUserDefaults];
+         weakSelf.hardWareVersionStr = [numUserDefaults objectForKey:FirmwareNumFromHardWareKey];
          int temp0 = [weakSelf.hardWareVersionStr intValue];
          int temp1 = [fileModel.FirmwareVersion intValue];
          if (temp1 > temp0) {
-             [self setUpNewVersion];
+             [self setUpNewVersionAlertView];
 //             [weakSelf downloadUpdateFile:weakSelf.firmwareUrl localPath:updateFilePath];
          }
          
@@ -508,7 +507,7 @@ static dispatch_source_t _heartBeatTimer;
     // 事件回调
     dispatch_source_set_event_handler(_timer, ^{
         NSString *tempStr = @"000000";
-        if (rockerArr) {
+        if (rockerArr.count) {
             tempStr = [NSString stringWithFormat:@"%@%@%@%@%@%@",rockerArr[0],rockerArr[1],rockerArr[2],rockerArr[3],rockerArr[4],rockerArr[5]];
         }
         NSData *rockerData = [self convertHexStrToData:tempStr];
@@ -518,7 +517,14 @@ static dispatch_source_t _heartBeatTimer;
 //        for (int i = 0; i<6; i++) {
 //            NSLog(@"rockerArr %x",rockerByte[i]);
 //        }
-        [self writeValue:rockerByte length:6];
+        if (isJoy) {
+           [self writeValue:rockerByte length:6];
+        }
+        
+        if ([self.positionStr isEqualToString:@"回中"]) {
+            
+            isJoy = NO;
+        }
     });
     
     // 开启定时器
@@ -1214,14 +1220,38 @@ static dispatch_source_t _heartBeatTimer;
             i++;
             ///插入section到tableview
             [weakSelf insertservices:s];
-            
-            NSLog(@"----------------------------------%@",s);
+
+//            NSLog(@"----------------------------------%@",s);
             
         }
         
         [weakSelf initCharacteristic];
         
         if ((i = peripheral.services.count)&&self.services.count) {
+            if (!isSend) {
+                if (weakSelf.characteristic1) {
+                    isSend = YES;
+                    [weakSelf setNotifiy];
+                    [NSThread sleepForTimeInterval:0.1];
+                    if (!startUpdate) {
+                        
+                        //请求姿态角
+                        Byte b[5] = {0XAA,0X60,0X02,0X01,0X01};
+                        [weakSelf writeValue:b length:sizeof(b)];
+                        [[NSOperationQueue new] addOperationWithBlock:^{
+                            
+                            [self sendValue];
+                        }];
+                    }
+                    
+                    [NSThread sleepForTimeInterval:1];
+                    [weakSelf getHaardWareVersion];
+                    
+                    [weakSelf.searchButton setTitle:[NSString stringWithFormat:@"已连接%@",weakSelf.peripheral.name] forState:UIControlStateNormal];
+                }
+                
+            }
+            
             dispatch_async(dispatch_get_main_queue(), ^{
                 
                 JDYAdjustViewController *adjustVc = [JDYAdjustViewController adjustViewController];
@@ -1294,7 +1324,7 @@ static dispatch_source_t _heartBeatTimer;
     PeripheralInfo *info = [[PeripheralInfo alloc]init];
     [info setServiceUUID:service.UUID];
     [self.services addObject:info];
-    NSLog(@"insertservices: %@ uuid: %@ info:%@",self.services,service.UUID, info);
+//    NSLog(@"insertservices: %@ uuid: %@ info:%@",self.services,service.UUID, info);
     
 }
 
@@ -1307,7 +1337,7 @@ static dispatch_source_t _heartBeatTimer;
         [self updatingAlertView:@"检查跟更新中..."];
         
         if (self.characteristic1 != nil) {
-            [self getHaardWareVersion];
+//            [self getHaardWareVersion];
             [self checkoutVersion];
             
         }else{
@@ -2627,6 +2657,7 @@ static dispatch_source_t _heartBeatTimer;
                                  NSString *temp = [NSString stringWithFormat:@"%@",characteristics.value];
                                  temp = [temp componentsSeparatedByString:@"<"].lastObject;
                                  temp = [temp componentsSeparatedByString:@">"].firstObject;
+                                 NSLog(@"temp %@",temp);
                                  if ([temp containsString:@"55b007"]) {
                                      NSData * data = characteristics.value;
                                      heartFlag = 3;
@@ -2643,8 +2674,10 @@ static dispatch_source_t _heartBeatTimer;
                                      NSRange range = NSMakeRange(11, 2);
                                      NSString *str = [temp substringWithRange:range];
                                      NSLog(@"--%@",str);
-                                     self.hardWareVersionStr = [temp substringWithRange:range];
-                                     
+                                     self.hardWareVersionStr = str;
+                                     NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+                                     [userDefaults setObject:str forKey:FirmwareNumFromHardWareKey];
+                                     [userDefaults synchronize];
 //                                     [self checkoutVersion];
                                  }
                                  
@@ -2850,9 +2883,14 @@ static dispatch_source_t _heartBeatTimer;
         [SVProgressHUD showErrorWithStatus:tempStr];
         return;
     }
+    
+//    if (self.hardWareVersionStr == nil) {
+//        [self getHaardWareVersion];
+//    }
+    
 }
 
-- (void)setUpNewVersion{
+- (void)setUpNewVersionAlertView{
 
     [self.progressAlertView removeFromSuperview];
     JDYAdjustAlertView *alertView = [JDYAdjustAlertView showInView:self.view];
@@ -3001,6 +3039,8 @@ static dispatch_source_t _heartBeatTimer;
         return;
     }
     
+    isJoy = YES;
+    self.positionStr = positionStr;
     NSLog(@"ViewController joyStick %@ -- %@",positionStr, speedStr);
     NSMutableArray *mutableArry = [NSMutableArray array];
     Byte tempArr[6];
@@ -3299,9 +3339,9 @@ static dispatch_source_t _heartBeatTimer;
         }
         
         NSData *data = [NSData dataWithBytes:&value length:length];
-        [self.peripheral writeValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithResponse];
+        [self.peripheral writeValue:data forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
         
-//        NSLog(@"writeValue -> %@",data);
+        NSLog(@"writeValue -> %@",data);
     }
     
 }

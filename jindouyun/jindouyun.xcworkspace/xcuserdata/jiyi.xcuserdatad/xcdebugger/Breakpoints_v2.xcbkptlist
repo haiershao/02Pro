@@ -10,12 +10,28 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "jindouyun/Classes/Camera/Controller/ViewController.m"
-            timestampString = "524754399.349945"
+            timestampString = "524980785.706748"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "3378"
-            endingLineNumber = "3378"
+            startingLineNumber = "3418"
+            endingLineNumber = "3418"
             landmarkName = "-knowMoreBtnClick:"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "jindouyun/Classes/Camera/Controller/ViewController.m"
+            timestampString = "524980130.547757"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "370"
+            endingLineNumber = "370"
+            landmarkName = "-checkoutVersion"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

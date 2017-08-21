@@ -24,15 +24,14 @@
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="DlE-ij-L68">
                                 <rect key="frame" x="0.0" y="0.0" width="375" height="64"/>
                                 <subviews>
-                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Qzp-oW-Bix">
-                                        <rect key="frame" x="10" y="20" width="80" height="44"/>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Qzp-oW-Bix">
+                                        <rect key="frame" x="10" y="20" width="100" height="44"/>
                                         <constraints>
                                             <constraint firstAttribute="height" constant="44" id="5Ke-Ht-UfX"/>
-                                            <constraint firstAttribute="width" constant="80" id="XaQ-IJ-OCZ"/>
+                                            <constraint firstAttribute="width" constant="100" id="XaQ-IJ-OCZ"/>
                                         </constraints>
-                                        <fontDescription key="fontDescription" type="system" pointSize="16"/>
+                                        <fontDescription key="fontDescription" type="system" pointSize="13"/>
                                         <state key="normal" title="连接设备"/>
-                                        <state key="highlighted" image="cameraH"/>
                                         <connections>
                                             <action selector="searchBtnAction:" destination="BYZ-38-t0r" eventType="touchUpInside" id="UXd-gB-lWF"/>
                                         </connections>
@@ -434,6 +433,7 @@
                         <outlet property="navView" destination="DlE-ij-L68" id="Hlw-j4-1mj"/>
                         <outlet property="pitchAxisLabel" destination="brD-lS-62A" id="be7-UG-dfK"/>
                         <outlet property="rockView" destination="YXs-7e-CXP" id="Tpm-3e-Sp4"/>
+                        <outlet property="searchButton" destination="Qzp-oW-Bix" id="zzl-HF-uqJ"/>
                         <outlet property="titleView" destination="E1D-zI-iR2" id="wiC-3x-TjD"/>
                         <outlet property="titleView1" destination="2WH-4g-gaG" id="7BS-Ph-UiN"/>
                         <outlet property="updateBtn" destination="4TZ-0s-kiM" id="lRc-Oo-fE3"/>
@@ -451,7 +451,6 @@
         <image name="arrowLittle" width="6" height="10"/>
         <image name="battery" width="35" height="14"/>
         <image name="calibration" width="25" height="25"/>
-        <image name="cameraH" width="35" height="35"/>
         <image name="reset" width="25" height="25"/>
         <image name="upgrade" width="25" height="25"/>
     </resources>
