@@ -73,6 +73,7 @@ typedef void(^onfinish)(BOOL finish);
     _Bool startUpdate;
     BOOL isSend;//是否已发送获取版本号
     BOOL isJoy;//摇杆是否被触摸
+    BOOL updateFlag;
 }
 @property (weak, nonatomic) UIView *coverView;
 @property (strong, nonatomic) NSMutableArray *peripheralDataArray;
@@ -127,6 +128,9 @@ typedef void(^onfinish)(BOOL finish);
 @property (strong, nonatomic) NSString *fileSavePath;
 @property (strong, nonatomic) NSString *positionStr;
 @property (weak, nonatomic) IBOutlet UIButton *searchButton;
+@property (weak, nonatomic) IBOutlet UIButton *joyButton;
+@property (weak, nonatomic) IBOutlet UIButton *xyzButton;
+
 @end
 
 static NSString *searchCellID = @"searchCellID";
@@ -225,7 +229,12 @@ static dispatch_source_t _heartBeatTimer;
 - (void)viewWillAppear:(BOOL)animated{
     
     [super viewWillAppear:animated];
+    
     self.navigationItem.rightBarButtonItem = [UIBarButtonItem itemWithImage:@"camera" highImage:@"cameraH" target:self action:@selector(cameraClick)];
+    if(self.peripheral.state == CBPeripheralStateDisconnected && self.peripheral.name != nil) {
+        [self setNotifiy];
+        return;
+    }
     
 
     NSLog(@"viewWillAppear %@",self.joystick);
@@ -236,6 +245,7 @@ static dispatch_source_t _heartBeatTimer;
     NSLog(@"viewDidAppear");
     //这里就可以解决camera控制器一开始预览层不全平问题
     [[UIApplication sharedApplication] setStatusBarOrientation:UIInterfaceOrientationPortrait];
+    [self setUpJoyView];
     NSLog(@"viewDidAppear %@",self.joystick);
     
     
@@ -257,12 +267,64 @@ static dispatch_source_t _heartBeatTimer;
     
     [super viewDidDisappear:animated];
     if (!startUpdate) {
-      
-        Byte b[5] = {0XAA,0X60,0X02,0X00,0X00};
-        [self writeValue:b length:sizeof(b)];
+        [self stopReceiveAttitudeAngle];
     }
 
     
+}
+
+- (void)startReceiveAttitudeAngle{
+
+    //请求姿态角
+    Byte b[5] = {0XAA,0X60,0X02,0X01,0X01};
+    [self writeValue:b length:sizeof(b)];
+}
+
+- (void)stopReceiveAttitudeAngle{
+
+    //停止回复姿态角
+    Byte b[5] = {0XAA,0X60,0X02,0X00,0X00};
+    [self writeValue:b length:sizeof(b)];
+}
+
+- (void)viewDidLayoutSubviews{
+
+    [super viewDidLayoutSubviews];
+    
+    
+}
+
+- (void)setUpJoyView{
+
+    CGFloat joyW = self.JoyBackView.width - 2*14;
+    CGFloat joyY = 0.5*(self.JoyBackView.height - joyW);
+    LHJoyStick *joystick = [LHJoyStick joystick];
+    joystick.x = 14;
+    joystick.y = joyY;
+    joystick.width = joyW;
+    joystick.height = joyW;
+    joystick.delegate = self;
+    [self.JoyBackView addSubview:joystick];
+    self.joystick = joystick;
+    
+    UIImageView *imageTop = [[UIImageView alloc] init];
+    imageTop.image = [UIImage imageNamed:@"arrow1"];
+    imageTop.width = 21;
+    imageTop.height = 14;
+    imageTop.x = 0.5*(self.JoyBackView.width - imageTop.height);
+    imageTop.y = joyY - imageTop.height;
+    [self.JoyBackView addSubview:imageTop];
+    
+    UIImageView *imageBottom = [[UIImageView alloc] init];
+    imageBottom.image = [UIImage imageNamed:@"arrow4"];
+    imageBottom.width = 21;
+    imageBottom.height = 14;
+    imageBottom.x = 0.5*(self.JoyBackView.width - imageBottom.width);
+    imageBottom.y = joyY + joystick.height;
+    
+    [self.JoyBackView addSubview:imageBottom];
+    
+    [self.JoyBackView bringSubviewToFront:joystick];
 }
 
 - (void)viewDidLoad {
@@ -301,7 +363,7 @@ static dispatch_source_t _heartBeatTimer;
     isSend = NO;
     isJoy = NO;
     self.positionStr = @"";
-
+    updateFlag = NO;
     
     
     [self setUpSubViews];
@@ -324,9 +386,7 @@ static dispatch_source_t _heartBeatTimer;
     [self setUpBatteryView];
     
     
-   
 
-    /////////////
 }
 
 - (void)getHaardWareVersion{
@@ -382,6 +442,7 @@ static dispatch_source_t _heartBeatTimer;
 
 - (void)downloadUpdateFile:(NSString *)firmwareUrl localPath:(NSString *)localPath{
 
+    [self updatingAlertView:@"正在下载固件"];
     //1.创建会话管理者
     AFHTTPSessionManager *manager =[AFHTTPSessionManager manager];
     NSURL *url = [NSURL URLWithString:firmwareUrl];
@@ -446,15 +507,15 @@ static dispatch_source_t _heartBeatTimer;
             
             if ([data writeToFile:localPath atomically:YES]) {
                 NSLog(@"localPath 写入成功");
-
+                [self.progressAlertView removeFromSuperview];
                 
                 if (self.characteristic1 != nil && self.peripheral.state == CBPeripheralStateConnected) {
                     //关机设备
-//                    Byte b[5] = {0XAA,0X5b,0X02,0X01,0X01};
-//                    [self writeValue:b length:sizeof(b)];
-                    [self setUpAlertView:@"设备关机，请打开设备"];
-                    [baby cancelAllPeripheralsConnection];
                     [baby AutoReconnect:self.peripheral];
+                    [self shutdown];
+                    [self setUpAlertView:@"设备关机，请打开设备"];
+//                    [baby cancelAllPeripheralsConnection];
+
                 }
             }else{
                 
@@ -470,6 +531,12 @@ static dispatch_source_t _heartBeatTimer;
 
     [download resume];
     
+}
+
+- (void)shutdown{
+
+    Byte b[5] = {0XAA,0X5b,0X02,0X01,0X01};
+    [self writeValue:b length:sizeof(b)];
 }
 
 - (NSMutableString *)createPathToMovie:(NSString *)listStr{
@@ -507,7 +574,7 @@ static dispatch_source_t _heartBeatTimer;
     // 事件回调
     dispatch_source_set_event_handler(_timer, ^{
         NSString *tempStr = @"000000";
-        if (rockerArr.count) {
+        if (rockerArr.count == 6) {
             tempStr = [NSString stringWithFormat:@"%@%@%@%@%@%@",rockerArr[0],rockerArr[1],rockerArr[2],rockerArr[3],rockerArr[4],rockerArr[5]];
         }
         NSData *rockerData = [self convertHexStrToData:tempStr];
@@ -579,35 +646,50 @@ static dispatch_source_t _heartBeatTimer;
     
     [self.xyzView addGestureRecognizer:tapGesture1];
     
-    CGFloat joyW = self.JoyBackView.width - 2*14;
-    CGFloat joyY = 0.5*(self.JoyBackView.height - joyW);
-    LHJoyStick *joystick = [LHJoyStick joystick];
-    joystick.x = 14;
-    joystick.y = joyY;
-    joystick.width = joyW;
-    joystick.height = joyW;
-    joystick.delegate = self;
-    [self.JoyBackView addSubview:joystick];
-    self.joystick = joystick;
+    CAGradientLayer *gradient0 = [CAGradientLayer layer];
+    gradient0.startPoint = CGPointMake(0, 0);
+    gradient0.endPoint = CGPointMake(1, 0);
+    gradient0.frame =CGRectMake(0,0,self.joyButton.width,self.joyButton.height);
+    gradient0.colors = [NSArray arrayWithObjects:(id)kColor(252, 23, 83, 1.0).CGColor,kColor(251, 33, 46, 1).CGColor,nil];
+    self.joyButton.layer.cornerRadius = 15;
+    self.joyButton.layer.masksToBounds = YES;
+    [self.joyButton.layer insertSublayer:gradient0 atIndex:0];
     
-    UIImageView *imageTop = [[UIImageView alloc] init];
-    imageTop.image = [UIImage imageNamed:@"arrow1"];
-    imageTop.width = 21;
-    imageTop.height = 14;
-    imageTop.x = 0.5*(screenW - self.mainPickerView.width - imageTop.width) + 5;
-    imageTop.y = joyY - imageTop.height;
-    [self.JoyBackView addSubview:imageTop];
+    CAGradientLayer *gradient1 = [CAGradientLayer layer];
+    gradient1.startPoint = CGPointMake(0, 0);
+    gradient1.endPoint = CGPointMake(1, 0);
+    gradient1.frame =CGRectMake(0,0,self.xyzButton.width,self.xyzButton.height);
+    gradient1.colors = [NSArray arrayWithObjects:(id)kColor(252, 23, 83, 1.0).CGColor,kColor(251, 33, 46, 1).CGColor,nil];
+    self.xyzButton.layer.cornerRadius = 15;
+    self.xyzButton.layer.masksToBounds = YES;
+    [self.xyzButton.layer insertSublayer:gradient1 atIndex:0];
     
-    UIImageView *imageBottom = [[UIImageView alloc] init];
-    imageBottom.image = [UIImage imageNamed:@"arrow4"];
-    imageBottom.width = 21;
-    imageBottom.height = 14;
-    imageBottom.x = 0.5*(screenW - self.mainPickerView.width - imageBottom.width) + 5;
-    imageBottom.y = joyY + joystick.height;
+}
+
+- (IBAction)rockBtnClick:(UIButton *)sender {
     
-    [self.JoyBackView addSubview:imageBottom];
+    [SVProgressHUD dismiss];
+    if (self.peripheral.state == CBPeripheralStateDisconnected) {
+        [self setUpAlertView:@"请连接设备"];
+        return;
+    }
+    JDYRockerSensitivityView *rockView = [JDYRockerSensitivityView rockerSensitivityView];
+    rockView.width = screenW;
+    rockView.height = screenH;
+    rockView.x = 0;
+    rockView.y = 0;
+    rockView.rockerPickerView.delegate = self;
+    rockView.rockerPickerView.dataSource = self;
+    self.rockerPickerView = rockView.rockerPickerView;
+    rockerRow = 1;
+    [rockView.rockerPickerView selectRow:1 inComponent:0 animated:NO];
+    [rockView.rockerPickerView reloadComponent:0];
+    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(rockView:)];
+    tapGesture.delegate = self;
     
-    [self.JoyBackView bringSubviewToFront:joystick];
+    [rockView addGestureRecognizer:tapGesture];
+    [self.view addSubview:rockView];
+    self.subRockView = rockView;
 }
 
 - (void)rockViewCell:(UITapGestureRecognizer*)gesture{
@@ -638,6 +720,32 @@ static dispatch_source_t _heartBeatTimer;
 - (void)rockView:(UITapGestureRecognizer*)gesture{
     
     [self.subRockView removeFromSuperview];
+}
+- (IBAction)xyzBtnClick:(UIButton *)sender {
+    
+    [SVProgressHUD dismiss];
+    if (self.peripheral.state == CBPeripheralStateDisconnected) {
+        [self setUpAlertView:@"请连接设备"];
+        return;
+    }
+    JDYXYZAxisView *AxisView = [JDYXYZAxisView XYZAxisView];
+    AxisView.width = screenW;
+    AxisView.height = screenH;
+    AxisView.x = 0;
+    AxisView.y = 0;
+    AxisView.axisView.delegate = self;
+    AxisView.axisView.dataSource = self;
+    AxisView.delegate = self;
+    self.axisPickerView = AxisView.axisView;
+    self.subAxisView = AxisView;
+    axisRow = 1;
+    [AxisView.axisView selectRow:1 inComponent:0 animated:NO];
+    [AxisView.axisView reloadComponent:0];
+    UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(axisView:)];
+    tapGesture.delegate = self;
+    
+    [AxisView addGestureRecognizer:tapGesture];
+    [self.view addSubview:AxisView];
 }
 
 - (void)xyzViewCell:(UITapGestureRecognizer*)gesture{
@@ -727,14 +835,36 @@ static dispatch_source_t _heartBeatTimer;
 }
 
 - (void)pickerView:(UIPickerView *)pickerView didSelectRow:(NSInteger)row inComponent:(NSInteger)component {
+    if (self.peripheral.state == CBPeripheralStateDisconnected) {
+        [self setUpAlertView:@"请连接设备"];
+        return;
+    }
     
     if (pickerView == self.rockerPickerView || pickerView == self.axisPickerView) {
 
         if (pickerView == self.axisPickerView) {
             axisRow = row;
+            if (0 == row) {
+                [self.xyzButton setTitle:@"高" forState:UIControlStateNormal];
+            }else if (1 == row){
+            
+                [self.xyzButton setTitle:@"中" forState:UIControlStateNormal];
+            }else if (2 == row){
+            
+                [self.xyzButton setTitle:@"低" forState:UIControlStateNormal];
+            }
         }
         if (pickerView == self.rockerPickerView) {
             rockerRow = row;
+            if (0 == row) {
+                [self.joyButton setTitle:@"高" forState:UIControlStateNormal];
+            }else if (1 == row){
+                
+                [self.joyButton setTitle:@"中" forState:UIControlStateNormal];
+            }else if (2 == row){
+                
+                [self.joyButton setTitle:@"低" forState:UIControlStateNormal];
+            }
         }
         [pickerView reloadComponent:0];
     }else{
@@ -1231,13 +1361,15 @@ static dispatch_source_t _heartBeatTimer;
             if (!isSend) {
                 if (weakSelf.characteristic1) {
                     isSend = YES;
+                    
+                    [self.xyzButton setTitle:@"中" forState:UIControlStateNormal];
+                    [self.joyButton setTitle:@"中" forState:UIControlStateNormal];
+                    
                     [weakSelf setNotifiy];
                     [NSThread sleepForTimeInterval:0.1];
                     if (!startUpdate) {
                         
-                        //请求姿态角
-                        Byte b[5] = {0XAA,0X60,0X02,0X01,0X01};
-                        [weakSelf writeValue:b length:sizeof(b)];
+//                        [weakSelf startReceiveAttitudeAngle];
                         [[NSOperationQueue new] addOperationWithBlock:^{
                             
                             [self sendValue];
@@ -1250,6 +1382,20 @@ static dispatch_source_t _heartBeatTimer;
                     [weakSelf.searchButton setTitle:[NSString stringWithFormat:@"已连接%@",weakSelf.peripheral.name] forState:UIControlStateNormal];
                 }
                 
+            }
+            if (weakSelf.characteristic1) {
+            
+                if (startUpdate) {
+                    
+                    if (updateFlag) {
+                        updateFlag = NO;
+                        NSLog(@"重连成功");
+//                        [weakSelf stopReceiveAttitudeAngle];
+                        sleep(1);
+                        [weakSelf startSendX];
+                    }
+                    
+                }
             }
             
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -1339,6 +1485,9 @@ static dispatch_source_t _heartBeatTimer;
         if (self.characteristic1 != nil) {
 //            [self getHaardWareVersion];
             [self checkoutVersion];
+            updateFlag = YES;
+            isUpdateX = YES;
+            startUpdate = YES;
             
         }else{
         
@@ -1351,8 +1500,7 @@ static dispatch_source_t _heartBeatTimer;
     
     
     
-//    isUpdateX = YES;
-//    startUpdate = YES;
+
 //    [self startSendX];
 }
 
@@ -1722,7 +1870,7 @@ static dispatch_source_t _heartBeatTimer;
                 NSData *data0 = [NSData dataWithBytes:&b length:sizeof(b)];
                 [self.peripheral writeValue:data0 forCharacteristic:self.characteristic1 type:CBCharacteristicWriteWithoutResponse];
                 self.isNext = 1;
-                NSLog(@" writeValue-> %@",data0);
+                NSLog(@"writeValue -> %@",data0);
             }
         }else{
             
@@ -2866,9 +3014,10 @@ static dispatch_source_t _heartBeatTimer;
                                          dispatch_semaphore_signal(_seamZ);
                                          NSLog(@"dispatch_semaphore_signal_Z1.2");
                                      }
-                                     //                                 if (_seam) {
+                                    if (startUpdate) {
+                                        
                                      NSLog(@"setNotifiy: %d -- %d -- %d -- %@ -- %@ -- %@ \n",isFinish, weakSelf.isNext, isUpdateY,_seam, _seamY,_seamZ);
-                                     //                                 }
+                                    }
                                  }
                                  
                                  
