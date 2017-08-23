@@ -75,6 +75,7 @@ typedef void(^onfinish)(BOOL finish);
     BOOL isSend;//是否已发送获取版本号
     BOOL isJoy;//摇杆是否被触摸
     BOOL updateFlag;
+    BOOL updateFlag0;
     JDYProgressView *circle;
     CGFloat circleW;
     JDYProgressView *progressView;
@@ -369,6 +370,7 @@ static dispatch_source_t _heartBeatTimer;
     self.positionStr = @"";
     updateFlag = NO;
     circleW = 0;
+    updateFlag0 = NO;
     
     
     [self setUpSubViews];
@@ -1054,6 +1056,8 @@ static dispatch_source_t _heartBeatTimer;
         return;
     }
     
+    updateFlag0 = YES;
+    
     //    [self _loadAnimationFromURLString:self.jsonStr0];
     NSArray *components = [self.jsonStr0 componentsSeparatedByString:@"/"];
     [self _loadAnimationNamed:components.lastObject];
@@ -1342,6 +1346,7 @@ static dispatch_source_t _heartBeatTimer;
         NSLog(@"设备：%@--断开连接",peripheral.name);
         [SVProgressHUD showInfoWithStatus:[NSString stringWithFormat:@"设备：%@--断开失败",peripheral.name]];
         [weakSelf performSelector:@selector(refresh:) withObject:@(YES) afterDelay:1];
+        [weakSelf.searchBtn setTitle:@"连接设备" forState:UIControlStateNormal];
     }];
     
     //设置发现设备的Services的委托
@@ -1384,10 +1389,11 @@ static dispatch_source_t _heartBeatTimer;
                     [weakSelf setNotifiy];
                     [NSThread sleepForTimeInterval:0.1];
                     if (!startUpdate) {
-                        
-//                        [weakSelf startReceiveAttitudeAngle];
+                        //请求姿态角
+                        [weakSelf startReceiveAttitudeAngle];
+                        [NSThread sleepForTimeInterval:0.5];
                         [[NSOperationQueue new] addOperationWithBlock:^{
-                            
+                            //发送摇杆位置信息
                             [self sendValue];
                         }];
                     }
@@ -1401,14 +1407,25 @@ static dispatch_source_t _heartBeatTimer;
             }
             if (weakSelf.characteristic1) {
             
+                NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+                NSString *str = [userDefaults objectForKey:FirmwareIsSucessKey];
+                
+                if ([str isEqualToString:@"NO"] && updateFlag0) {
+                    updateFlag0 = NO;
+                    updateFlag = YES;
+                    isUpdateX = YES;
+                    startUpdate = YES;
+                }
+                
                 if (startUpdate) {
                     
                     if (updateFlag) {
                         updateFlag = NO;
                         NSLog(@"重连成功");
-//                        [weakSelf stopReceiveAttitudeAngle];
+                        [weakSelf stopReceiveAttitudeAngle];
                         sleep(1);
                         [weakSelf startSendX];
+                        sleep(1);
                     }
                     
                 }
@@ -1505,6 +1522,11 @@ static dispatch_source_t _heartBeatTimer;
             isUpdateX = YES;
             startUpdate = YES;
             
+            //记录升级是否完成
+            NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+            NSString *str = @"NO";
+            [userDefaults setObject:str forKey:FirmwareIsSucessKey];
+            [userDefaults synchronize];
         }else{
         
             [self setUpAlertView:@"设备连接异常，请重新连接"];
@@ -1869,12 +1891,17 @@ static dispatch_source_t _heartBeatTimer;
 }
 
 - (void)startSendX{
+    //0CA2A693-610E-48A0-A2BB-932BCE9DB3C3
     NSUserDefaults *UserDefaults = [NSUserDefaults standardUserDefaults];
      NSData *unData = [UserDefaults objectForKey:FirmwareVersionKey];
      JDYFirmWareFile *unmodel = [NSKeyedUnarchiver unarchiveObjectWithData:unData];
      NSLog(@"fileModel %@",unmodel.localPath);
-    if ([[NSFileManager defaultManager] fileExistsAtPath:unmodel.localPath]) {
-        NSData *data = [NSData dataWithContentsOfFile:unmodel.localPath];
+    
+    
+    if (![[NSFileManager defaultManager] fileExistsAtPath:unmodel.localPath]) {
+        NSString * filePath=[[NSBundle mainBundle] pathForResource:@"hardwareUpdateFile" ofType:@"bin"];
+        NSData * data = [NSData dataWithContentsOfFile:filePath];
+//        NSData *data = [NSData dataWithContentsOfFile:unmodel.localPath];
         if (data) {
             self.updataFileData = data;
             
@@ -3005,6 +3032,10 @@ static dispatch_source_t _heartBeatTimer;
                                              startUpdate = NO;
                                              [weakSelf.laAnimation1 removeFromSuperview];
                                              [weakSelf.progressAlertView removeFromSuperview];
+                                             NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+                                             NSString *str = @"YES";
+                                             [userDefaults setObject:str forKey:FirmwareIsSucessKey];
+                                             [userDefaults synchronize];
                                              UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"成功" message:@"更新完成"
                                                                                             delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil];
                                              [alert show];

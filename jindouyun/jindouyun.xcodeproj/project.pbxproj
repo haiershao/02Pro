@@ -44,6 +44,7 @@
 		6C8E20C41F3A9C8A00CA6506 /* LHJoyStick.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6C8E20C31F3A9C8A00CA6506 /* LHJoyStick.xib */; };
 		6C8E20C81F3B343300CA6506 /* JDYTravelingShoViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C8E20C61F3B343300CA6506 /* JDYTravelingShoViewController.m */; };
 		6C8E20C91F3B343300CA6506 /* JDYTravelingShoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6C8E20C71F3B343300CA6506 /* JDYTravelingShoViewController.xib */; };
+		6C8F4F2E1F4D87B300837D55 /* hardwareUpdateFile.bin in Resources */ = {isa = PBXBuildFile; fileRef = 6C8F4F2D1F4D87B300837D55 /* hardwareUpdateFile.bin */; };
 		6CA9986F1F4D11060096BBB3 /* JDYProgressView.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CA9986E1F4D11060096BBB3 /* JDYProgressView.m */; };
 		6CB41F7E1F341EE000998EBA /* JDYProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CB41F7D1F341EE000998EBA /* JDYProxy.m */; };
 		6CB41F811F3420A200998EBA /* JDYNavView.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CB41F801F3420A200998EBA /* JDYNavView.m */; };
@@ -124,6 +125,7 @@
 		6C8E20C51F3B343300CA6506 /* JDYTravelingShoViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JDYTravelingShoViewController.h; sourceTree = "<group>"; };
 		6C8E20C61F3B343300CA6506 /* JDYTravelingShoViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JDYTravelingShoViewController.m; sourceTree = "<group>"; };
 		6C8E20C71F3B343300CA6506 /* JDYTravelingShoViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = JDYTravelingShoViewController.xib; sourceTree = "<group>"; };
+		6C8F4F2D1F4D87B300837D55 /* hardwareUpdateFile.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = hardwareUpdateFile.bin; sourceTree = "<group>"; };
 		6CA9986D1F4D11060096BBB3 /* JDYProgressView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JDYProgressView.h; sourceTree = "<group>"; };
 		6CA9986E1F4D11060096BBB3 /* JDYProgressView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JDYProgressView.m; sourceTree = "<group>"; };
 		6CB41F7C1F341EE000998EBA /* JDYProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JDYProxy.h; sourceTree = "<group>"; };
@@ -335,6 +337,7 @@
 				6C549C9C1F32D4C9007F4DB7 /* PublicHeader */,
 				6C549C9D1F32D4C9007F4DB7 /* ThirdParty */,
 				6C27ED561F32F0CC009DB4E6 /* jindouyun.pch */,
+				6C8F4F2D1F4D87B300837D55 /* hardwareUpdateFile.bin */,
 				6CD9A8051F413C6A00203A7C /* default080301.bin */,
 				6CD9A8061F413C6A00203A7C /* 0425.bin */,
 			);
@@ -444,6 +447,7 @@
 				6CB626731F3857B200A69673 /* JDYRockerSensitivityView.xib in Resources */,
 				6C27ED551F32F039009DB4E6 /* loading-data.json in Resources */,
 				6CB626781F38931900A69673 /* JDYXYZAxisView.xib in Resources */,
+				6C8F4F2E1F4D87B300837D55 /* hardwareUpdateFile.bin in Resources */,
 				6C4119A51F3D9DDF001A3F92 /* JDYAdjustProgressAlertView.xib in Resources */,
 				6CD9A80D1F41856C00203A7C /* JDYFinishAlertView.xib in Resources */,
 				6C8E20C41F3A9C8A00CA6506 /* LHJoyStick.xib in Resources */,
