@@ -10,11 +10,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "jindouyun/Classes/Camera/Controller/ViewController.m"
-            timestampString = "525086641.338425"
+            timestampString = "525169931.997895"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "3569"
-            endingLineNumber = "3569"
+            startingLineNumber = "3591"
+            endingLineNumber = "3591"
             landmarkName = "-knowMoreBtnClick:"
             landmarkType = "7">
          </BreakpointContent>

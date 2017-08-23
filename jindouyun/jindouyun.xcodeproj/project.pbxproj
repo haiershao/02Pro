@@ -44,6 +44,7 @@
 		6C8E20C41F3A9C8A00CA6506 /* LHJoyStick.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6C8E20C31F3A9C8A00CA6506 /* LHJoyStick.xib */; };
 		6C8E20C81F3B343300CA6506 /* JDYTravelingShoViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C8E20C61F3B343300CA6506 /* JDYTravelingShoViewController.m */; };
 		6C8E20C91F3B343300CA6506 /* JDYTravelingShoViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6C8E20C71F3B343300CA6506 /* JDYTravelingShoViewController.xib */; };
+		6CA9986F1F4D11060096BBB3 /* JDYProgressView.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CA9986E1F4D11060096BBB3 /* JDYProgressView.m */; };
 		6CB41F7E1F341EE000998EBA /* JDYProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CB41F7D1F341EE000998EBA /* JDYProxy.m */; };
 		6CB41F811F3420A200998EBA /* JDYNavView.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CB41F801F3420A200998EBA /* JDYNavView.m */; };
 		6CB626711F38576000A69673 /* JDYRockerSensitivityView.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CB626701F38576000A69673 /* JDYRockerSensitivityView.m */; };
@@ -123,6 +124,8 @@
 		6C8E20C51F3B343300CA6506 /* JDYTravelingShoViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JDYTravelingShoViewController.h; sourceTree = "<group>"; };
 		6C8E20C61F3B343300CA6506 /* JDYTravelingShoViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JDYTravelingShoViewController.m; sourceTree = "<group>"; };
 		6C8E20C71F3B343300CA6506 /* JDYTravelingShoViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = JDYTravelingShoViewController.xib; sourceTree = "<group>"; };
+		6CA9986D1F4D11060096BBB3 /* JDYProgressView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JDYProgressView.h; sourceTree = "<group>"; };
+		6CA9986E1F4D11060096BBB3 /* JDYProgressView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JDYProgressView.m; sourceTree = "<group>"; };
 		6CB41F7C1F341EE000998EBA /* JDYProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JDYProxy.h; sourceTree = "<group>"; };
 		6CB41F7D1F341EE000998EBA /* JDYProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = JDYProxy.m; sourceTree = "<group>"; };
 		6CB41F7F1F3420A200998EBA /* JDYNavView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JDYNavView.h; sourceTree = "<group>"; };
@@ -312,6 +315,8 @@
 				6C4119A41F3D9DDF001A3F92 /* JDYAdjustProgressAlertView.xib */,
 				6C6BFED61F3DBB8A00F08F8E /* LHGradientProgress.h */,
 				6C6BFED71F3DBB8A00F08F8E /* LHGradientProgress.m */,
+				6CA9986D1F4D11060096BBB3 /* JDYProgressView.h */,
+				6CA9986E1F4D11060096BBB3 /* JDYProgressView.m */,
 				6CD9A8091F41855A00203A7C /* JDYFinishAlertView.h */,
 				6CD9A80A1F41855A00203A7C /* JDYFinishAlertView.m */,
 				6CD9A80C1F41856C00203A7C /* JDYFinishAlertView.xib */,
@@ -520,6 +525,7 @@
 				6CD9A80B1F41855A00203A7C /* JDYFinishAlertView.m in Sources */,
 				6C27ED7C1F32FF8D009DB4E6 /* JDYAdjustViewController.m in Sources */,
 				6C27ED6E1F32F5C8009DB4E6 /* MJRefreshHeaderView.m in Sources */,
+				6CA9986F1F4D11060096BBB3 /* JDYProgressView.m in Sources */,
 				6C27ED6C1F32F5C8009DB4E6 /* MJRefreshConst.m in Sources */,
 				6C6BFED81F3DBB8A00F08F8E /* LHGradientProgress.m in Sources */,
 				6C549C9F1F32D4C9007F4DB7 /* PeripheralInfo.m in Sources */,

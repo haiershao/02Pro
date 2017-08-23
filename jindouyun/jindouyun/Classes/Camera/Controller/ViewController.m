@@ -24,6 +24,7 @@
 #import <AFNetworking.h>
 #import "JDYFirmWareFile.h"
 #import "JDYFinishAlertView.h"
+#import "JDYProgressView.h"
 
 #define channelOnCharacteristicView @"CharacteristicView"
 #define channelOnPeropheralView @"peripheralView"
@@ -74,6 +75,9 @@ typedef void(^onfinish)(BOOL finish);
     BOOL isSend;//是否已发送获取版本号
     BOOL isJoy;//摇杆是否被触摸
     BOOL updateFlag;
+    JDYProgressView *circle;
+    CGFloat circleW;
+    JDYProgressView *progressView;
 }
 @property (weak, nonatomic) UIView *coverView;
 @property (strong, nonatomic) NSMutableArray *peripheralDataArray;
@@ -364,6 +368,7 @@ static dispatch_source_t _heartBeatTimer;
     isJoy = NO;
     self.positionStr = @"";
     updateFlag = NO;
+    circleW = 0;
     
     
     [self setUpSubViews];
@@ -561,8 +566,19 @@ static dispatch_source_t _heartBeatTimer;
     UIView *batteryView = [[UIView alloc] init];
     batteryView.backgroundColor = [UIColor greenColor];
     batteryView.frame = CGRectMake(2, 2, self.batteryImageView.width - 7, self.batteryImageView.height - 4);
-    [self.batteryImageView addSubview:batteryView];
     
+    circleW = self.batteryImageView.width - 7;
+    
+    progressView = [[JDYProgressView alloc] initWithFrame:CGRectMake(2, 2, self.batteryImageView.width - 7, self.batteryImageView.height - 4)];
+
+    [self sliderMethod:0.09];
+    [self.batteryImageView addSubview:progressView];
+    
+}
+
+-(void)sliderMethod:(CGFloat)value
+{
+    progressView.progressValue = value;
 }
 
 - (void)sendValue{
