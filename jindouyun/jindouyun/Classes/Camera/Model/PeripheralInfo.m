@@ -10,13 +10,27 @@
 
 @implementation PeripheralInfo
 
--(instancetype)init{
-    self = [super init];
-    if (self) {
-        _characteristics = [[NSMutableArray alloc]init];
-        _serviceUUID = [[CBUUID alloc] init];
+//-(instancetype)init{
+//    self = [super init];
+//    if (self) {
+//        _characteristics = [[NSMutableArray alloc]init];
+//        _serviceUUID = [[CBUUID alloc] init];
+//    }
+//    return self;
+//}
+
+- (id)initWithCoder:(NSCoder *)aDecoder
+{
+    if(self = [super init])
+    {
+        self.peripheral = [aDecoder decodeObjectForKey:@"Peripheral"];
+        
     }
     return self;
 }
 
+- (void)encodeWithCoder:(NSCoder *)aCoder
+{
+    [aCoder encodeObject:self.peripheral forKey:@"Peripheral"];
+}
 @end

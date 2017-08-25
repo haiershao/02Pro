@@ -9,9 +9,9 @@
 #import <Foundation/Foundation.h>
 #import <CoreBluetooth/CoreBluetooth.h>
 
-@interface PeripheralInfo : NSObject
+@interface PeripheralInfo : NSObject <NSCoding>
 
 @property (nonatomic,strong) CBUUID *serviceUUID;
 @property (nonatomic,strong) NSMutableArray *characteristics;
-
+@property (nonatomic,strong) CBPeripheral *peripheral;
 @end

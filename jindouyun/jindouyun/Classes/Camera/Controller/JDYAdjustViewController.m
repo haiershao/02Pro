@@ -330,7 +330,7 @@
     long xTemp = [[self numberHexString:[NSString stringWithFormat:@"%x%x",xByte[0],xByte[1]]] longValue];
     long yTemp = [[self numberHexString:[NSString stringWithFormat:@"%x%x",yByte[0],yByte[1]]] longValue];
     long zTemp = [[self numberHexString:[NSString stringWithFormat:@"%x%x",zByte[0],zByte[1]]] longValue];
-    NSLog(@"adjustValue %ld--%ld--%ld",xTemp,yTemp,zTemp);
+    NSLog(@"姿态角 adjustValue %ld--%ld--%ld",xTemp,yTemp,zTemp);
     if (xTemp >32768) {
         xTemp = (xTemp - 65536);
     }
@@ -346,7 +346,7 @@
     double x = ((double)xTemp/32768)*360;
     double y = ((double)yTemp/32768)*360;
     double z = ((double)zTemp/32768)*360;
-    NSLog(@"adjustValue %f--%f--%f",x,y,z);
+    NSLog(@"姿态角 adjustValue %f--%f--%f",x,y,z);
     
 }
 

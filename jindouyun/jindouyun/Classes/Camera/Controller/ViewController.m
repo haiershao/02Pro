@@ -422,10 +422,11 @@ static dispatch_source_t _heartBeatTimer;
          NSString *updateFilePath = [[self createPathToMovie:@"updateFile"] stringByAppendingPathComponent:[NSString stringWithFormat:@"hardwareUpdateFile.bin"]];
          
          fileModel.localPath = updateFilePath;
-         weakSelf.fileSavePath = fileModel.localPath;
+         weakSelf.fileSavePath = updateFilePath;
          NSData *modelData = [NSKeyedArchiver archivedDataWithRootObject:fileModel];
          NSUserDefaults *UserDefaults = [NSUserDefaults standardUserDefaults];
          [UserDefaults setObject:modelData forKey:FirmwareVersionKey];
+         [UserDefaults setObject:updateFilePath forKey:FirmwareLocalPathKey];
          [UserDefaults synchronize];
          
 //         NSData *unData = [UserDefaults objectForKey:FirmwareVersionKey];
@@ -511,18 +512,24 @@ static dispatch_source_t _heartBeatTimer;
         }else{
         
             NSData *data = [NSData dataWithContentsOfFile:(NSString *)filePath];
-            
             if ([data writeToFile:localPath atomically:YES]) {
-                NSLog(@"localPath 写入成功");
+                NSLog(@"localPath 写入成功 -- %@",localPath);
                 [self.progressAlertView removeFromSuperview];
                 
                 if (self.characteristic1 != nil && self.peripheral.state == CBPeripheralStateConnected) {
-                    //关机设备
+                   
                     [baby AutoReconnect:self.peripheral];
+                     //关机设备
                     [self shutdown];
                     [self setUpAlertView:@"设备关机，请打开设备"];
 //                    [baby cancelAllPeripheralsConnection];
 
+//                    NSUserDefaults *UserDefaults = [NSUserDefaults standardUserDefaults];
+//                    PeripheralInfo *model = [[PeripheralInfo alloc] init];
+//                    model.peripheral = self.peripheral;
+//                    NSData *modelData = [NSKeyedArchiver archivedDataWithRootObject:model];
+//                    [UserDefaults setObject:modelData forKey:UpdatingPeripheralKey];
+//                    [UserDefaults synchronize];
                 }
             }else{
                 
@@ -544,6 +551,7 @@ static dispatch_source_t _heartBeatTimer;
 
     Byte b[5] = {0XAA,0X5b,0X02,0X01,0X01};
     [self writeValue:b length:sizeof(b)];
+    sleep(2);//等个两秒，固件那边需要时间将硬件彻底关机
 }
 
 - (NSMutableString *)createPathToMovie:(NSString *)listStr{
@@ -1343,10 +1351,16 @@ static dispatch_source_t _heartBeatTimer;
     
     //设置设备断开连接的委托
     [baby setBlockOnDisconnectAtChannel:channelOnPeropheralView block:^(CBCentralManager *central, CBPeripheral *peripheral, NSError *error) {
-        NSLog(@"设备：%@--断开连接",peripheral.name);
-        [SVProgressHUD showInfoWithStatus:[NSString stringWithFormat:@"设备：%@--断开失败",peripheral.name]];
-        [weakSelf performSelector:@selector(refresh:) withObject:@(YES) afterDelay:1];
-        [weakSelf.searchBtn setTitle:@"连接设备" forState:UIControlStateNormal];
+        
+        if (!error) {
+            [SVProgressHUD showInfoWithStatus:[NSString stringWithFormat:@"设备：%@--断开失败",peripheral.name]];
+            [weakSelf performSelector:@selector(refresh:) withObject:@(YES) afterDelay:1];
+            [weakSelf.searchBtn setTitle:@"连接设备" forState:UIControlStateNormal];
+        }else{
+        
+            NSLog(@"设备：%@--断开连接 error: %@",peripheral.name,error);
+        }
+        
     }];
     
     //设置发现设备的Services的委托
@@ -1364,7 +1378,7 @@ static dispatch_source_t _heartBeatTimer;
     }];
     //设置读取characteristics的委托
     [baby setBlockOnReadValueForCharacteristicAtChannel:channelOnPeropheralView block:^(CBPeripheral *peripheral, CBCharacteristic *characteristics, NSError *error) {
-        NSLog(@"characteristic name:%@ value is:%@",characteristics.UUID,characteristics.value);
+        NSLog(@"babyDelegate2 characteristic name:%@ value is:%@",characteristics.UUID,characteristics.value);
         weakSelf.coverView.hidden = YES;
         NSInteger i = 0;
         for (CBService *s in peripheral.services) {
@@ -1415,6 +1429,11 @@ static dispatch_source_t _heartBeatTimer;
                     updateFlag = YES;
                     isUpdateX = YES;
                     startUpdate = YES;
+                    if (isSend) {
+                        isSend = NO;
+                        [weakSelf setNotifiy];
+                    }
+                    
                 }
                 
                 if (startUpdate) {
@@ -1422,8 +1441,8 @@ static dispatch_source_t _heartBeatTimer;
                     if (updateFlag) {
                         updateFlag = NO;
                         NSLog(@"重连成功");
-                        [weakSelf stopReceiveAttitudeAngle];
-                        sleep(1);
+//                        [weakSelf stopReceiveAttitudeAngle];
+//                        sleep(1);
                         [weakSelf startSendX];
                         sleep(1);
                     }
@@ -1447,7 +1466,7 @@ static dispatch_source_t _heartBeatTimer;
         }
         
         NSString *str = [[NSString alloc] initWithData:characteristics.value encoding:NSUTF8StringEncoding];
-        NSLog(@"characteristic name:%@ value str is:%@",characteristics.UUID,str);
+        NSLog(@"babyDelegate2 characteristic name:%@ value str is:%@",characteristics.UUID,str);
     }];
     //设置发现characteristics的descriptors的委托
     [baby setBlockOnDiscoverDescriptorsForCharacteristicAtChannel:channelOnPeropheralView block:^(CBPeripheral *peripheral, CBCharacteristic *characteristic, NSError *error) {
@@ -1891,17 +1910,12 @@ static dispatch_source_t _heartBeatTimer;
 }
 
 - (void)startSendX{
-    //0CA2A693-610E-48A0-A2BB-932BCE9DB3C3
-    NSUserDefaults *UserDefaults = [NSUserDefaults standardUserDefaults];
-     NSData *unData = [UserDefaults objectForKey:FirmwareVersionKey];
-     JDYFirmWareFile *unmodel = [NSKeyedUnarchiver unarchiveObjectWithData:unData];
-     NSLog(@"fileModel %@",unmodel.localPath);
     
+    NSString *localPath = [[self createPathToMovie:@"updateFile"] stringByAppendingPathComponent:[NSString stringWithFormat:@"hardwareUpdateFile.bin"]];
     
-    if (![[NSFileManager defaultManager] fileExistsAtPath:unmodel.localPath]) {
-        NSString * filePath=[[NSBundle mainBundle] pathForResource:@"hardwareUpdateFile" ofType:@"bin"];
-        NSData * data = [NSData dataWithContentsOfFile:filePath];
-//        NSData *data = [NSData dataWithContentsOfFile:unmodel.localPath];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:localPath]) {
+
+        NSData *data = [NSData dataWithContentsOfFile:localPath];
         if (data) {
             self.updataFileData = data;
             
@@ -3030,15 +3044,19 @@ static dispatch_source_t _heartBeatTimer;
                                              isUpdateZ = NO;
                                              isZend = YES;
                                              startUpdate = NO;
+                                             isSend = NO;
                                              [weakSelf.laAnimation1 removeFromSuperview];
                                              [weakSelf.progressAlertView removeFromSuperview];
                                              NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
                                              NSString *str = @"YES";
                                              [userDefaults setObject:str forKey:FirmwareIsSucessKey];
                                              [userDefaults synchronize];
-                                             UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"成功" message:@"更新完成"
-                                                                                            delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil];
-                                             [alert show];
+                                             
+                                             [self setUpAlertView:@"升级完成..."];
+//                                             UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"成功" message:@"更新完成"
+//                                                                                            delegate:nil cancelButtonTitle:@"确定" otherButtonTitles:nil];
+//                                             [alert show];
+                                             
                                          }
                                      }else{
                                          

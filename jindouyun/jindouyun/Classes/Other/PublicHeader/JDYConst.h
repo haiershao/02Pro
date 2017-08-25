@@ -23,6 +23,8 @@
 #define FirmwareVersionKey @"FirmwareVersion"
 #define FirmwareNumFromHardWareKey @"FirmwareNumFromHardWare"
 #define FirmwareIsSucessKey @"FirmwareIsSucess"
+#define FirmwareLocalPathKey @"FirmwareLocalPath"
+#define UpdatingPeripheralKey @"UpdatingPeripheral"
 
 #define JYNotificationCenter [NSNotificationCenter defaultCenter]
 #define JYLog(...) NSLog(__VA_ARGS__)
